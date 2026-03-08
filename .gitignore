@@ -16,3 +16,4 @@ cdk.context.json
 # Others
 .DS_Store
 scripts
+export.zip

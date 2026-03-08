@@ -1,20 +1,74 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Project context for OpenSpec workflows
+context: |
+  # HealthNova Backend - Apple Health Data Analysis Platform
+  
+  ## Tech Stack
+  - Infrastructure: AWS CDK (TypeScript)
+  - Runtime: Python 3.x for Lambda functions
+  - Storage: DynamoDB (health metrics), S3 (raw exports, processed data)
+  - Auth: Cognito User Pools
+  - API: API Gateway REST API
+  - Processing: Lambda for async processing, Step Functions for workflows
+  
+  ## Architecture
+  - Frontend requests presigned S3 URL from API endpoint
+  - Direct upload from browser to S3 (no backend bottleneck)
+  - S3 event triggers Lambda for async processing
+  - Event-driven processing of Apple Health export.zip files
+  - XML parsing of exportar.xml (944MB+ file with health records)
+  - GPX parsing for workout routes
+  - ECG data analysis for cardiac health monitoring
+  
+  ## Data Types from Apple Health Export
+  - Health Records: Heart rate, HRV, blood pressure, oxygen saturation, sleep
+  - Workouts: Activity type, duration, distance, energy burned, routes (GPX)
+  - ECG: Electrocardiogram data for atrial fibrillation detection
+  - Activity Summaries: Daily activity rings data
+  
+  ## Domain: Preventive Health Analytics
+  - Focus on cardiovascular disease prevention
+  - Early detection of heart rhythm abnormalities
+  - Trend analysis for health metrics over time
+  - Risk scoring based on clinical guidelines
+  
+  ## Conventions
+  - Python: snake_case, type hints, docstrings
+  - TypeScript: camelCase, strict mode, explicit types
+  - Lambda organization: /src/lambda/{domain}/{function-name}
+  - Shared code: Lambda layers in /src/layer
+  - IAM: Least privilege principle, explicit resource ARNs
+  
+  ## Security & Compliance
+  - HIPAA considerations for health data
+  - Encryption at rest (S3, DynamoDB) and in transit
+  - No PII in logs or CloudWatch
+  - Secure presigned URLs for file uploads (time-limited)
+  
+  ## Performance
+  - Large XML files: Stream parsing, not in-memory
+  - Batch processing for historical data analysis
+  - DynamoDB single-table design with GSIs
+  - S3 lifecycle policies for cost optimization
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - Include security and privacy considerations for health data
+    - Estimate AWS costs when introducing new services
+    - Consider HIPAA compliance requirements
+    - Address scalability for large XML files (500MB+)
+    - Include data retention and lifecycle policies
+  
+  tasks:
+    - Maximum 2 hours per task
+    - Include unit tests for business logic
+    - Add integration tests for Lambda functions
+    - Document any new environment variables
+    - Update IAM policies when adding AWS service access
+  
+  changes:
+    - Run `npm run build` before committing TypeScript
+    - Test Lambda functions locally when possible
+    - Validate CDK synth before deployment
+    - Check for sensitive data in logs
