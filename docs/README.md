@@ -77,6 +77,19 @@ Diagramas ASCII que muestran:
 
 **Ideal para:** Aprendizaje visual, entender flujos, referencia rápida
 
+### 6. [Integración AITMPL + OpenSpec](./integracion-aitmpl-openspec.md)
+**Cómo combinar AITMPL con OpenSpec en Claude Code (terminal)**
+
+Guía de integración que cubre:
+- Qué es AITMPL y sus componentes
+- Instalación de agents, commands y MCPs
+- Componentes recomendados para TypeScript + AWS CDK
+- Flujo de trabajo integrado
+- Configuración específica para tu proyecto
+- Herramientas adicionales (analytics, health check)
+
+**Ideal para:** Usar Claude Code en terminal con OpenSpec + AITMPL
+
 ## 🚀 Ruta de Aprendizaje Recomendada
 
 ### Nivel 1: Principiante (Día 1)
@@ -143,7 +156,8 @@ docs/
 ├── ejemplos-openspec.md              # Ejemplos prácticos
 ├── referencia-rapida-openspec.md     # Cheatsheet
 ├── faq-openspec.md                   # Preguntas frecuentes
-└── diagramas-openspec.md             # Visualizaciones y diagramas
+├── diagramas-openspec.md             # Visualizaciones y diagramas
+└── integracion-aitmpl-openspec.md    # Integración con AITMPL
 ```
 
 ## 🔗 Enlaces Rápidos
