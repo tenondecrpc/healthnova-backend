@@ -1,0 +1,18 @@
+# Default
+*.js
+!jest.config.js
+*.d.ts
+node_modules
+build
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+cdk.context.json
+
+# Environment variables
+.env
+
+# Others
+.DS_Store
+scripts
