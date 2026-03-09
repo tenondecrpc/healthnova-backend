@@ -165,11 +165,57 @@ Trabajando en tarea 2/5: Crear endpoint de callback
 - La implementación revela un problema de diseño → sugiere actualizar artefactos
 - Encuentra un error o bloqueo → reporta y espera orientación
 
-### 4. `/opsx:archive` - Archivar
+### 4. `/opsx:security` - Revisión de Seguridad
 
-**Cuándo usarlo:** Cuando has completado todas las tareas y quieres finalizar el cambio.
+**Cuándo usarlo:** Después de completar la implementación y antes de archivar, especialmente para cambios que manejan datos sensibles.
 
 **Qué hace:**
+- Analiza el cambio en busca de vulnerabilidades de seguridad
+- Valida cumplimiento HIPAA (encriptación, logs sin PHI, etc.)
+- Revisa políticas IAM y control de accesos
+- Verifica que no haya secretos hardcodeados
+- Genera un reporte detallado con hallazgos y recomendaciones
+
+**Ejemplo de uso:**
+```
+Usuario: /opsx:security health-data-ingestion
+
+Claude: ## Security Review Complete: health-data-ingestion
+
+**Status**: ⚠️ WARNINGS
+
+### Findings Summary
+- CRITICAL: 0
+- HIGH: 1
+- MEDIUM: 2
+- LOW: 3
+
+### High Priority Issues
+1. Lambda function logs user_id which may be considered PII
+   → Recommendation: Use hashed user identifiers in logs
+
+### Report Location
+openspec/changes/health-data-ingestion/security-review.md
+
+### Next Steps
+- Review and address HIGH priority findings
+- Update tasks.md with security fixes if needed
+- Re-run security review after fixes
+```
+
+**Características clave:**
+- Genera un archivo `security-review.md` con análisis completo
+- Clasifica hallazgos por severidad (CRITICAL/HIGH/MEDIUM/LOW)
+- Incluye checklist de cumplimiento HIPAA
+- Proporciona recomendaciones accionables
+- Bloquea el archive si hay issues CRITICAL
+
+### 5. `/opsx:archive` - Archivar
+
+**Cuándo usarlo:** Cuando has completado todas las tareas, pasado la revisión de seguridad, y quieres finalizar el cambio.
+
+**Qué hace:**
+- Verifica que exista una revisión de seguridad (recomienda crearla si no existe)
 - Verifica que todos los artefactos estén completos
 - Verifica que todas las tareas estén marcadas como completadas
 - Sincroniza las especificaciones delta con las principales (si existen)
@@ -185,6 +231,7 @@ Claude: ## Archivo Completo
 **Schema:** spec-driven
 **Archivado en:** openspec/changes/archive/2026-03-08-agregar-autenticacion-oauth/
 **Specs:** ✓ Sincronizadas con specs principales
+**Security:** ✓ Reviewed and passed
 
 Todos los artefactos completos. Todas las tareas completas.
 ```
@@ -200,7 +247,10 @@ Todos los artefactos completos. Todas las tareas completas.
 2. /opsx:apply
    → Claude implementa las tareas
 
-3. /opsx:archive
+3. /opsx:security
+   → Revisión de seguridad y generación de reporte
+
+4. /opsx:archive
    → Cambio completado y archivado
 ```
 
@@ -217,7 +267,10 @@ Todos los artefactos completos. Todas las tareas completas.
 3. /opsx:apply
    → Implementación
 
-4. /opsx:archive
+4. /opsx:security
+   → Validación de seguridad
+
+5. /opsx:archive
    → Finalización
 ```
 

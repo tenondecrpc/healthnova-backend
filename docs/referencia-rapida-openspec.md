@@ -7,7 +7,8 @@
 | `/opsx:explore` | Tienes una idea vaga o necesitas pensar | Modo exploración: investiga, compara opciones, visualiza arquitectura |
 | `/opsx:propose` | Sabes qué quieres construir | Crea cambio y genera todos los artefactos (proposal, design, specs, tasks) |
 | `/opsx:apply` | Tienes tareas definidas y listo para codificar | Implementa las tareas una por una |
-| `/opsx:archive` | Completaste todas las tareas | Archiva el cambio y sincroniza specs |
+| `/opsx:security` | Completaste implementación, antes de archivar | Valida seguridad, genera reporte con hallazgos y recomendaciones |
+| `/opsx:archive` | Completaste todas las tareas y pasaste security | Archiva el cambio y sincroniza specs |
 
 ## Comandos CLI
 
@@ -140,7 +141,8 @@ rules:
 ```
 1. /opsx:propose <nombre>
 2. /opsx:apply
-3. /opsx:archive
+3. /opsx:security
+4. /opsx:archive
 ```
 
 ### Flujo con Exploración
@@ -148,7 +150,8 @@ rules:
 1. /opsx:explore <idea>
 2. /opsx:propose <nombre>
 3. /opsx:apply
-4. /opsx:archive
+4. /opsx:security
+5. /opsx:archive
 ```
 
 ### Flujo con Revisión
@@ -156,7 +159,8 @@ rules:
 1. /opsx:propose <nombre>
 2. [Revisar y ajustar artefactos]
 3. /opsx:apply
-4. /opsx:archive
+4. /opsx:security
+5. /opsx:archive
 ```
 
 ### Flujo Adaptativo
@@ -166,7 +170,8 @@ rules:
 3. [Pausa por problema de diseño]
 4. [Actualizar design.md]
 5. /opsx:apply (continuar)
-6. /opsx:archive
+6. /opsx:security
+7. /opsx:archive
 ```
 
 ## Atajos y Tips
@@ -327,6 +332,7 @@ Si descubres algo durante `/opsx:apply`, actualiza los artefactos.
 /opsx:explore    → Modo exploración
 /opsx:propose    → Crear propuesta
 /opsx:apply      → Implementar
+/opsx:security   → Revisión de seguridad
 /opsx:archive    → Archivar
 ```
 
@@ -419,13 +425,23 @@ vim openspec/changes/agregar-notificaciones-email/design.md
 # 5. Implementar
 /opsx:apply
 
-# 6. Verificar estado
+# 6. Revisión de seguridad
+/opsx:security agregar-notificaciones-email
+
+# 7. Revisar reporte de seguridad
+cat openspec/changes/agregar-notificaciones-email/security-review.md
+
+# 8. Corregir issues críticos si existen (opcional)
+# [Hacer correcciones]
+# /opsx:security agregar-notificaciones-email  # Re-validar
+
+# 9. Verificar estado
 openspec status --change agregar-notificaciones-email
 
-# 7. Archivar
+# 10. Archivar
 /opsx:archive
 
-# 8. Verificar archivo
+# 11. Verificar archivo
 ls openspec/changes/archive/
 ```
 

@@ -24,7 +24,26 @@ Archive a completed change in the experimental workflow.
 
    **IMPORTANT**: Do NOT guess or auto-select a change. Always let the user choose.
 
-2. **Check artifact completion status**
+2. **Check for security review**
+
+   Check if `openspec/changes/<name>/security-review.md` exists.
+
+   **If security review does NOT exist:**
+   - Display warning: "⚠️ No security review found"
+   - Recommend running `/opsx:security <name>` first
+   - Use **AskUserQuestion tool** to confirm user wants to proceed without security review
+   - Proceed if user confirms
+
+   **If security review exists:**
+   - Read the file and check the Status line
+   - If status is "FAIL" or contains CRITICAL issues:
+     - Display warning with critical issues
+     - Recommend fixing issues before archiving
+     - Use **AskUserQuestion tool** to confirm user wants to proceed
+     - Proceed if user confirms
+   - If status is "PASS" or "WARNINGS" (no CRITICAL): Proceed normally
+
+3. **Check artifact completion status**
 
    Run `openspec status --change "<name>" --json` to check artifact completion.
 
@@ -37,7 +56,7 @@ Archive a completed change in the experimental workflow.
    - Use **AskUserQuestion tool** to confirm user wants to proceed
    - Proceed if user confirms
 
-3. **Check task completion status**
+4. **Check task completion status**
 
    Read the tasks file (typically `tasks.md`) to check for incomplete tasks.
 
@@ -50,7 +69,7 @@ Archive a completed change in the experimental workflow.
 
    **If no tasks file exists:** Proceed without task-related warning.
 
-4. **Assess delta spec sync state**
+5. **Assess delta spec sync state**
 
    Check for delta specs at `openspec/changes/<name>/specs/`. If none exist, proceed without sync prompt.
 
@@ -65,7 +84,7 @@ Archive a completed change in the experimental workflow.
 
    If user chooses sync, use Task tool (subagent_type: "general-purpose", prompt: "Use Skill tool to invoke openspec-sync-specs for change '<name>'. Delta spec analysis: <include the analyzed delta spec summary>"). Proceed to archive regardless of choice.
 
-5. **Perform the archive**
+6. **Perform the archive**
 
    Create the archive directory if it doesn't exist:
    ```bash
@@ -82,7 +101,7 @@ Archive a completed change in the experimental workflow.
    mv openspec/changes/<name> openspec/changes/archive/YYYY-MM-DD-<name>
    ```
 
-6. **Display summary**
+7. **Display summary**
 
    Show archive completion summary including:
    - Change name
@@ -100,6 +119,7 @@ Archive a completed change in the experimental workflow.
 **Schema:** <schema-name>
 **Archived to:** openspec/changes/archive/YYYY-MM-DD-<name>/
 **Specs:** ✓ Synced to main specs (or "No delta specs" or "Sync skipped")
+**Security:** ✓ Reviewed and passed (or "⚠️ No review" or "⚠️ Issues noted")
 
 All artifacts complete. All tasks complete.
 ```
