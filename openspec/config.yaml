@@ -72,3 +72,35 @@ rules:
     - Test Lambda functions locally when possible
     - Validate CDK synth before deployment
     - Check for sensitive data in logs
+
+# Testing conventions
+testing:
+  structure:
+    pattern: "test/[domain]/[resource].test.ts"
+    domains:
+      - s3
+      - lambda
+      - dynamodb
+      - step-functions
+      - glue
+      - cognito
+      - api-gateway
+    helpers: "test/helpers/"
+  
+  naming:
+    files: "[resource].test.ts (kebab-case)"
+    describes: "Descriptive resource name in English"
+    tests: "Specific behavior being tested (start with verb)"
+  
+  setup:
+    shared: "test/helpers/setup.ts"
+    usage: "import { getTemplate } from '../helpers/setup'"
+    cache: "Template is cached, use getTemplate() in all tests"
+  
+  rules:
+    - Always use getTemplate() from helpers/setup.ts
+    - One file per main AWS resource
+    - Organize by AWS service domain
+    - Use relative imports for helpers
+    - No business logic tests (those are unit tests)
+    - No integration tests requiring real AWS deployment

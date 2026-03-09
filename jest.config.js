@@ -1,3 +1,14 @@
+require('dotenv').config();
+
 module.exports = {
-  testMatch: ['**/build/test/**/*.test.js'],
+  testEnvironment: 'node',
+  roots: ['<rootDir>/test'],
+  testMatch: ['**/*.test.ts'],
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: {
+        isolatedModules: true,
+      },
+    }],
+  },
 };
