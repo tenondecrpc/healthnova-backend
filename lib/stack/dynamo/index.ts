@@ -14,6 +14,7 @@ export interface DynamoFactoryProps {
 export class DynamoFactory extends Construct {
   public readonly userTable: DynamoConstruct;
   public readonly processTable: DynamoConstruct;
+  public readonly healthRecordsTable: DynamoConstruct;
 
   constructor(scope: Construct, id: string, props: DynamoFactoryProps) {
     super(scope, id);
@@ -46,6 +47,34 @@ export class DynamoFactory extends Construct {
           type: dynamodb.AttributeType.STRING,
         },
         billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      },
+    });
+
+    this.healthRecordsTable = new DynamoConstruct(this, 'HealthRecordsTable', {
+      params,
+      tableConfig: {
+        tableName: `${projectName}-${envName}-health-records`,
+        partitionKey: {
+          name: 'PK',
+          type: dynamodb.AttributeType.STRING,
+        },
+        sortKey: {
+          name: 'SK',
+          type: dynamodb.AttributeType.STRING,
+        },
+        billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+        globalSecondaryIndexes: [{
+          indexName: 'UserTypeIndex',
+          partitionKey: {
+            name: 'PK',
+            type: dynamodb.AttributeType.STRING,
+          },
+          sortKey: {
+            name: 'GSI1SK',
+            type: dynamodb.AttributeType.STRING,
+          },
+          projectionType: dynamodb.ProjectionType.ALL,
+        }],
       },
     });
   }

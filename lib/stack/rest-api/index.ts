@@ -110,6 +110,12 @@ export class RestApiFactory extends Construct {
         requestValidator: 'body',
         requireAuth: true,
       },
+      {
+        path: '/upload/presigned-url',
+        method: 'POST',
+        lambda: lambdaFactory.presignedUrlExportLambda.function,
+        requireAuth: true,
+      },
       // ===================
       // FUTURE ROUTES (commented for reference)
       // ===================

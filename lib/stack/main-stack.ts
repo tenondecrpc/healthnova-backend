@@ -8,6 +8,8 @@ import { CognitoFactory } from './cognito';
 import { RestApiFactory } from './rest-api';
 import { S3Factory } from './s3';
 import { SetupFactory } from './setup';
+import { StepFunctionsFactory } from './step-functions';
+import { GlueFactory } from './glue';
 
 interface MainStackProps extends cdk.StackProps {
   env: EnvironmentConfig;
@@ -44,6 +46,17 @@ export class MainStack extends cdk.Stack {
       params,
       cognitoFactory,
       lambdaFactory
+    });
+    const glueFactory = new GlueFactory(this, 'GlueFactory', {
+      params,
+      s3Factory,
+      dynamoFactory,
+    });
+    const stepFunctionsFactory = new StepFunctionsFactory(this, 'StepFunctionsFactory', {
+      params,
+      lambdaFactory,
+      s3Factory,
+      glueJobName: glueFactory.parseHealthXmlJobName,
     });
     const setupFactory = new SetupFactory(this, 'SetupFactory', {
       lambdaFactory,

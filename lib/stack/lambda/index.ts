@@ -1,5 +1,6 @@
 import { Construct } from "constructs";
 import { Duration, RemovalPolicy } from "aws-cdk-lib";
+import * as iam from "aws-cdk-lib/aws-iam";
 import { LambdaConstruct } from "../../construct/lambda-construct";
 import { Code, LayerVersion } from "aws-cdk-lib/aws-lambda";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
@@ -25,6 +26,12 @@ export class LambdaFactory extends Construct {
   public readonly preSignupLambda: LambdaConstruct;
   public readonly processLambda: LambdaConstruct;
   public readonly presignedUrlUploadLambda: LambdaConstruct;
+  public readonly presignedUrlExportLambda: LambdaConstruct;
+  public readonly validateFileLambda: LambdaConstruct;
+  public readonly extractManifestLambda: LambdaConstruct;
+  public readonly markCompleteLambda: LambdaConstruct;
+  public readonly parseEcgLambda: LambdaConstruct;
+  public readonly parseGpxLambda: LambdaConstruct;
   public readonly notFoundLambda: LambdaConstruct;
   public readonly authorizerLambda: LambdaConstruct;
 
@@ -96,6 +103,127 @@ export class LambdaFactory extends Construct {
         PHOTOS_BUCKET_NAME: s3Factory.photosBucket.bucket.bucketName,
       },
       additionalPolicies: [s3Policy],
+      logging: {
+        logRetention: RetentionDays.ONE_MONTH,
+        removalPolicy: logRemovalPolicy,
+      },
+    });
+
+    const exportsBucketPutPolicy = new iam.PolicyStatement({
+      actions: ['s3:PutObject'],
+      resources: [s3Factory.exportsBucket.arnForObjects('exports/*')],
+    });
+    this.presignedUrlExportLambda = new LambdaConstruct(this, 'PresignedUrlExportLambda', {
+      functionName: `${projectName}-${envName}-presigned-url-export`,
+      description: 'Generates a presigned PUT URL for Apple Health export upload',
+      code: Code.fromAsset('src/lambda/core/presigned-url-export'),
+      handler: 'index.handler',
+      runtime: PYTHON_RUNTIME,
+      layers: [layerFactory.pythonCommonLayer.layer],
+      environment: {
+        EXPORTS_BUCKET_NAME: s3Factory.exportsBucket.bucket.bucketName,
+        PRESIGNED_URL_EXPIRY_SECONDS: '3600',
+      },
+      additionalPolicies: [exportsBucketPutPolicy],
+      logging: {
+        logRetention: RetentionDays.ONE_MONTH,
+        removalPolicy: logRemovalPolicy,
+      },
+    });
+
+    const exportsBucketReadPolicy = new iam.PolicyStatement({
+      actions: ['s3:GetObject', 's3:HeadObject'],
+      resources: [s3Factory.exportsBucket.arnForObjects('exports/*')],
+    });
+    const healthRecordsWritePolicy = new iam.PolicyStatement({
+      actions: ['dynamodb:PutItem', 'dynamodb:BatchWriteItem'],
+      resources: [
+        dynamoFactory.healthRecordsTable.tableArn,
+        `${dynamoFactory.healthRecordsTable.tableArn}/index/*`,
+      ],
+    });
+
+    this.validateFileLambda = new LambdaConstruct(this, 'ValidateFileLambda', {
+      functionName: `${projectName}-${envName}-validate-file`,
+      description: 'Validates uploaded export ZIP integrity and structure',
+      code: Code.fromAsset('src/lambda/ingestion/validate-file'),
+      handler: 'index.handler',
+      runtime: PYTHON_RUNTIME,
+      layers: [layerFactory.pythonCommonLayer.layer],
+      timeout: Duration.minutes(2),
+      memorySize: 512,
+      additionalPolicies: [exportsBucketReadPolicy],
+      logging: {
+        logRetention: RetentionDays.ONE_MONTH,
+        removalPolicy: logRemovalPolicy,
+      },
+    });
+
+    this.extractManifestLambda = new LambdaConstruct(this, 'ExtractManifestLambda', {
+      functionName: `${projectName}-${envName}-extract-manifest`,
+      description: 'Lists files inside the export ZIP for downstream processing',
+      code: Code.fromAsset('src/lambda/ingestion/extract-manifest'),
+      handler: 'index.handler',
+      runtime: PYTHON_RUNTIME,
+      layers: [layerFactory.pythonCommonLayer.layer],
+      timeout: Duration.minutes(2),
+      memorySize: 512,
+      additionalPolicies: [exportsBucketReadPolicy],
+      logging: {
+        logRetention: RetentionDays.ONE_MONTH,
+        removalPolicy: logRemovalPolicy,
+      },
+    });
+
+    this.markCompleteLambda = new LambdaConstruct(this, 'MarkCompleteLambda', {
+      functionName: `${projectName}-${envName}-mark-complete`,
+      description: 'Writes final job status to DynamoDB',
+      code: Code.fromAsset('src/lambda/ingestion/mark-complete'),
+      handler: 'index.handler',
+      runtime: PYTHON_RUNTIME,
+      layers: [layerFactory.pythonCommonLayer.layer],
+      environment: {
+        HEALTH_RECORDS_TABLE_NAME: dynamoFactory.healthRecordsTable.table.tableName,
+      },
+      additionalPolicies: [healthRecordsWritePolicy],
+      logging: {
+        logRetention: RetentionDays.ONE_MONTH,
+        removalPolicy: logRemovalPolicy,
+      },
+    });
+
+    this.parseEcgLambda = new LambdaConstruct(this, 'ParseEcgLambda', {
+      functionName: `${projectName}-${envName}-parse-ecg`,
+      description: 'Parses ECG CSV files from the export ZIP',
+      code: Code.fromAsset('src/lambda/ingestion/parse-ecg'),
+      handler: 'index.handler',
+      runtime: PYTHON_RUNTIME,
+      layers: [layerFactory.pythonCommonLayer.layer],
+      timeout: Duration.minutes(5),
+      memorySize: 512,
+      environment: {
+        HEALTH_RECORDS_TABLE_NAME: dynamoFactory.healthRecordsTable.table.tableName,
+      },
+      additionalPolicies: [exportsBucketReadPolicy, healthRecordsWritePolicy],
+      logging: {
+        logRetention: RetentionDays.ONE_MONTH,
+        removalPolicy: logRemovalPolicy,
+      },
+    });
+
+    this.parseGpxLambda = new LambdaConstruct(this, 'ParseGpxLambda', {
+      functionName: `${projectName}-${envName}-parse-gpx`,
+      description: 'Parses GPX workout route files from the export ZIP',
+      code: Code.fromAsset('src/lambda/ingestion/parse-gpx'),
+      handler: 'index.handler',
+      runtime: PYTHON_RUNTIME,
+      layers: [layerFactory.pythonCommonLayer.layer],
+      timeout: Duration.minutes(5),
+      memorySize: 512,
+      environment: {
+        HEALTH_RECORDS_TABLE_NAME: dynamoFactory.healthRecordsTable.table.tableName,
+      },
+      additionalPolicies: [exportsBucketReadPolicy, healthRecordsWritePolicy],
       logging: {
         logRetention: RetentionDays.ONE_MONTH,
         removalPolicy: logRemovalPolicy,
