@@ -7,7 +7,6 @@ import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { ParamsConfig } from "../shared/util/env-config";
 import { DynamoFactory } from "../dynamo";
 import { PYTHON_RUNTIME } from "../shared/util/runtime";
-import { dynamoPolicy, s3Policy } from "../shared/policy";
 import { S3Factory } from "../s3";
 import { LayerFactory } from "../layer";
 
@@ -53,7 +52,10 @@ export class LambdaFactory extends Construct {
       environment: {
         USER_TABLE_NAME: dynamoFactory.userTable.table.tableName,
       },
-      additionalPolicies: [dynamoPolicy],
+      additionalPolicies: [new iam.PolicyStatement({
+        actions: ['dynamodb:PutItem'],
+        resources: [dynamoFactory.userTable.tableArn],
+      })],
       logging: {
         logRetention: RetentionDays.ONE_MONTH,
         removalPolicy: logRemovalPolicy,
@@ -85,7 +87,13 @@ export class LambdaFactory extends Construct {
       environment: {
         PROCESS_TABLE_NAME: dynamoFactory.processTable.table.tableName,
       },
-      additionalPolicies: [dynamoPolicy],
+      additionalPolicies: [new iam.PolicyStatement({
+        actions: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:Query'],
+        resources: [
+          dynamoFactory.processTable.tableArn,
+          `${dynamoFactory.processTable.tableArn}/index/*`,
+        ],
+      })],
       logging: {
         logRetention: RetentionDays.ONE_MONTH,
         removalPolicy: logRemovalPolicy,
@@ -102,7 +110,10 @@ export class LambdaFactory extends Construct {
       environment: {
         PHOTOS_BUCKET_NAME: s3Factory.photosBucket.bucket.bucketName,
       },
-      additionalPolicies: [s3Policy],
+      additionalPolicies: [new iam.PolicyStatement({
+        actions: ['s3:PutObject'],
+        resources: [s3Factory.photosBucket.arnForObjects('*')],
+      })],
       logging: {
         logRetention: RetentionDays.ONE_MONTH,
         removalPolicy: logRemovalPolicy,

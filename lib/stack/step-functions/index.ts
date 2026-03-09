@@ -26,6 +26,17 @@ export class StepFunctionsFactory extends Construct {
     const { params, lambdaFactory, s3Factory, glueJobName } = props;
     const { envName, projectName } = params;
 
+    // Step 0: Extract userId and jobId from the S3 key path
+    // Key format: exports/{userId}/{timestamp}.zip
+    const parseInput = new sfn.Pass(this, 'ParseInput', {
+      parameters: {
+        'bucket.$': '$.bucket',
+        'key.$': '$.key',
+        'userId.$': "States.ArrayGetItem(States.StringSplit($.key, '/'), 1)",
+        'jobId.$': "States.ArrayGetItem(States.StringSplit(States.ArrayGetItem(States.StringSplit($.key, '/'), 2), '.'), 0)",
+      },
+    });
+
     // Step 1: Validate file
     const validateFile = new tasks.LambdaInvoke(this, 'ValidateFile', {
       lambdaFunction: lambdaFactory.validateFileLambda.function,
@@ -117,7 +128,8 @@ export class StepFunctionsFactory extends Construct {
     });
 
     // Chain the workflow
-    const definition = validateFile
+    const definition = parseInput
+      .next(validateFile)
       .next(extractManifest)
       .next(parallelParsing)
       .next(markComplete);
@@ -147,8 +159,6 @@ export class StepFunctionsFactory extends Construct {
       input: events.RuleTargetInput.fromObject({
         bucket: events.EventField.fromPath('$.detail.bucket.name'),
         key: events.EventField.fromPath('$.detail.object.key'),
-        userId: events.EventField.fromPath('$.detail.object.key'),
-        jobId: events.EventField.fromPath('$.detail.object.key'),
       }),
     }));
 

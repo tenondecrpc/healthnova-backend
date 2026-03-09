@@ -1,12 +1,13 @@
 ---
-name: openspec-apply-change
-description: Implement tasks from an OpenSpec change. Use when the user wants to start implementing, continue implementation, or work through tasks.
+name: _openspec-apply-change
+description: Internal skill for implementing tasks. Use /opsx:apply command instead.
 license: MIT
 compatibility: Requires openspec CLI.
 metadata:
   author: openspec
   version: "1.0"
   generatedBy: "1.2.0"
+  internal: true
 ---
 
 Implement tasks from an OpenSpec change.

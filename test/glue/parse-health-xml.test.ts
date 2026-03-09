@@ -12,6 +12,22 @@ describe('Glue Job: parse-health-xml', () => {
     });
   });
 
+  test('Glue job timeout is 240 minutes (aligned with state machine)', () => {
+    getTemplate().hasResourceProperties('AWS::Glue::Job', {
+      Name: 'healthnova-dev-parse-health-xml',
+      Timeout: 240,
+    });
+  });
+
+  test('Glue job disables continuous CloudWatch logging', () => {
+    getTemplate().hasResourceProperties('AWS::Glue::Job', {
+      Name: 'healthnova-dev-parse-health-xml',
+      DefaultArguments: {
+        '--enable-continuous-cloudwatch-log': 'false',
+      },
+    });
+  });
+
   test('Glue job IAM role has scoped S3 and DynamoDB access', () => {
     getTemplate().hasResourceProperties('AWS::IAM::Role', {
       RoleName: 'healthnova-dev-glue-parse-health-xml',

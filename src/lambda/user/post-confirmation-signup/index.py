@@ -9,8 +9,8 @@ from typing import Dict, Any
 
 # Import from common layer
 from common import (
-    get_logger, 
-    log_lambda_event, 
+    get_logger,
+    log_request_metadata,
     log_error,
     create_success_response,
     create_error_response,
@@ -42,7 +42,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         Modified event for Cognito
     """
     # Log event and context
-    log_lambda_event(logger, event, context)
+    log_request_metadata(logger, context)
     
     try:
         # Extract user information from event
@@ -115,7 +115,7 @@ def api_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Returns:
         API Gateway response with CORS headers
     """
-    log_lambda_event(logger, event, context)
+    log_request_metadata(logger, context)
     
     try:
         # Extract user ID from Authorization header or event

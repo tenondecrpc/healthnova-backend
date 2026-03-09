@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from common import get_logger, log_lambda_event
+from common import get_logger, log_request_metadata
 
 logger = get_logger(__name__)
 
@@ -8,7 +8,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Pre-signup Lambda trigger for Cognito
     Validates user registration before allowing signup
     """
-    log_lambda_event(logger, event, context)
+    log_request_metadata(logger, context)
     
     try:
         # Extract user attributes

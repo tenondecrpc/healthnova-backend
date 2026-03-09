@@ -63,6 +63,26 @@ npm test
 npx cdk synth
 ```
 
+## OpenSpec Workflow
+
+This project uses OpenSpec for structured feature development. Use these commands in Claude/Kiro:
+
+```
+/opsx:explore [idea]        # Explore ideas and clarify requirements
+/opsx:propose [name]        # Create new change with proposal, design, and tasks
+/opsx:apply [change]        # Implement tasks from a change
+/opsx:security [change]     # Run security review (HIPAA, IAM, encryption)
+/opsx:archive [change]      # Archive completed change
+```
+
+**Typical workflow:**
+1. `/opsx:propose health-data-ingestion` - Generate structured proposal
+2. `/opsx:apply health-data-ingestion` - Implement tasks one by one
+3. `/opsx:security health-data-ingestion` - Review security before production
+4. `/opsx:archive health-data-ingestion` - Archive when complete
+
+All OpenSpec artifacts live in `/openspec/changes/[change-name]/`
+
 ## Development Guidelines
 
 ### Python (Lambda Functions)
@@ -81,7 +101,7 @@ npx cdk synth
 ### Security
 - Encrypt all data at rest and in transit
 - Use least privilege IAM policies
-- Time-limited presigned URLs (5 min max)
+- Time-limited presigned URLs (1 hour max)
 - No hardcoded credentials
 - HIPAA-aware logging (no PHI)
 

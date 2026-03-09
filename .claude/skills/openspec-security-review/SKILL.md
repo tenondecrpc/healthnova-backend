@@ -1,11 +1,12 @@
 ---
-name: openspec-security-review
-description: Perform a comprehensive security review of an OpenSpec change before archiving. Validates HIPAA compliance, IAM policies, encryption, logging practices, and AWS security best practices.
+name: _openspec-security-review
+description: Internal skill for security review. Use /opsx:security command instead.
 license: MIT
 compatibility: Requires openspec CLI.
 metadata:
   author: healthnova
   version: "1.0"
+  internal: true
 ---
 
 Perform a comprehensive security review of an OpenSpec change.

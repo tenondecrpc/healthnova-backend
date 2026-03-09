@@ -18,19 +18,11 @@ export class S3Factory extends Construct {
     const { params } = props;
     const { projectName, envName } = params;
 
-    // TODO: Bucket is configured as public temporarily for development
-    // Change to private in production and configure access via presigned URLs
     this.photosBucket = new S3Construct(this, 'PhotosBucket', {
         params,
         bucketConfig: {
             bucketName: `${projectName}-${envName}-photos`,
-            publicReadAccess: true, // TODO: Change to false in production or remove it
-            blockPublicAccess: new s3.BlockPublicAccess({ // TODO: Remove this in production
-                blockPublicAcls: true,        // Block public ACLs
-                ignorePublicAcls: true,       // Ignore existing public ACLs
-                blockPublicPolicy: false,     // Allow public bucket policies (needed for publicReadAccess)
-                restrictPublicBuckets: false  // Allow public bucket policies to be applied
-            }),
+            blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
             cors: [{
                 allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.POST],
                 allowedOrigins: ['*'],

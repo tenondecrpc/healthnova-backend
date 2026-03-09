@@ -42,5 +42,5 @@ If no change name is provided, the skill will prompt you to select from availabl
 /opsx:archive health-data-ingestion  # Archive when PASS
 ```
 
-**Invokes:** openspec-security-review skill
+**Invokes:** _openspec-security-review skill
 

@@ -1,5 +1,5 @@
 # Common utilities for Lambda functions
-from .logger import setup_logger, get_logger, log_lambda_event, log_error
+from .logger import setup_logger, get_logger, log_request_metadata, log_error
 from .response import (
     create_response, 
     create_success_response,
@@ -25,7 +25,7 @@ __all__ = [
     # Logger utilities
     'setup_logger',
     'get_logger',
-    'log_lambda_event',
+    'log_request_metadata',
     'log_error',
     
     # Response utilities

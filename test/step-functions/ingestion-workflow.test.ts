@@ -1,6 +1,18 @@
-import { getTemplate } from '../helpers/setup';
+import { getTemplate, getResources } from '../helpers/setup';
 
 describe('Step Functions Ingestion Workflow', () => {
+  test('state machine definition contains ParseInput state for userId extraction', () => {
+    const resources = getResources();
+    const smKey = Object.keys(resources).find(
+      k => resources[k].Type === 'AWS::StepFunctions::StateMachine',
+    );
+    expect(smKey).toBeDefined();
+    const definition = JSON.stringify(resources[smKey!].Properties);
+    expect(definition).toContain('ParseInput');
+    expect(definition).toContain('States.StringSplit');
+    expect(definition).toContain('States.ArrayGetItem');
+  });
+
   test('creates ingestion state machine', () => {
     getTemplate().hasResourceProperties('AWS::StepFunctions::StateMachine', {
       StateMachineName: 'healthnova-dev-health-ingestion',

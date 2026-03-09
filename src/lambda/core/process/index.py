@@ -4,11 +4,11 @@ import boto3
 from typing import Dict, Any
 from decimal import Decimal
 from common import (
-    get_logger, 
-    with_cors, 
-    create_success_response, 
+    get_logger,
+    with_cors,
+    create_success_response,
     create_error_response,
-    log_lambda_event
+    log_request_metadata,
 )
 
 logger = get_logger(__name__)
@@ -35,7 +35,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Process handler - Saves process data to DynamoDB
     """
-    log_lambda_event(logger, event, context)
+    log_request_metadata(logger, context)
     
     try:
         # Parse request body

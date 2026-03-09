@@ -66,9 +66,11 @@ export class GlueFactory extends Construct {
         '--TABLE_NAME': dynamoFactory.healthRecordsTable.tableName,
         '--enable-metrics': 'true',
         '--job-language': 'python',
+        '--enable-continuous-cloudwatch-log': 'false',
+        '--job-bookmark-option': 'job-bookmark-disable',
       },
       maxRetries: 1,
-      timeout: 480, // 8 hours max
+      timeout: 240, // 4 hours — aligned with state machine timeout
       glueVersion: '3.0',
     });
   }
