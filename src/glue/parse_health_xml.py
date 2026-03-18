@@ -13,6 +13,8 @@ Arguments (passed via Step Functions):
   --TABLE_NAME: DynamoDB table name
 """
 
+from __future__ import annotations
+
 import io
 import logging
 import sys
@@ -100,7 +102,7 @@ def _find_xml_file(zf: zipfile.ZipFile) -> str | None:
 
 def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table: "boto3.resources.factory.dynamodb.Table") -> int:
     """Stream-parse the XML and batch-write records to DynamoDB."""
-    batch: list[dict] = []
+    batch_index: dict = {}
     total_written = 0
     records_skipped = 0
 
@@ -136,20 +138,24 @@ def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table: "b
             "creationDate": creation_date,
         }
 
-        batch.append(item)
+        key = (item["PK"], item["SK"])
+        batch_index[key] = item
         elem.clear()
 
-        if len(batch) >= BATCH_SIZE:
-            _write_batch(table, batch)
-            total_written += len(batch)
-            batch = []
+        if len(batch_index) >= BATCH_SIZE:
+            items = list(batch_index.values())
+            _write_batch(table, items)
+            total_written += len(items)
+            batch_index = {}
 
             if total_written % 1000 == 0:
                 logger.info("Progress: %d records written", total_written)
 
-    if batch:
-        _write_batch(table, batch)
-        total_written += len(batch)
+
+    if batch_index:
+        items = list(batch_index.values())
+        _write_batch(table, items)
+        total_written += len(items)
 
     logger.info("Skipped %d records of non-tracked types", records_skipped)
     return total_written

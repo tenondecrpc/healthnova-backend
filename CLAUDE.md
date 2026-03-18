@@ -1,5 +1,9 @@
 # HealthNova Backend
 
+## Core Rules
+
+- **Comments**: Only add code comments when explicitly requested. All comments must be written in English.
+
 AWS CDK infrastructure for analyzing Apple Health data exports to provide preventive health insights and cardiovascular disease risk assessment.
 
 ## Overview

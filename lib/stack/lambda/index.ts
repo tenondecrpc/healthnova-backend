@@ -48,7 +48,7 @@ export class LambdaFactory extends Construct {
       code: Code.fromAsset('src/lambda/user/post-confirmation-signup'),
       handler: 'index.handler',
       runtime: PYTHON_RUNTIME,
-      layers: [],
+      layers: [layerFactory.pythonCommonLayer.layer],
       environment: {
         USER_TABLE_NAME: dynamoFactory.userTable.table.tableName,
       },
@@ -68,7 +68,7 @@ export class LambdaFactory extends Construct {
       code: Code.fromAsset('src/lambda/user/pre-signup'),
       handler: 'index.handler',
       runtime: PYTHON_RUNTIME,
-      layers: [],
+      layers: [layerFactory.pythonCommonLayer.layer],
       logging: {
         logRetention: RetentionDays.ONE_MONTH,
         removalPolicy: logRemovalPolicy,

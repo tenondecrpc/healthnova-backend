@@ -17,3 +17,6 @@ cdk.context.json
 .DS_Store
 scripts
 export.zip
+export_full.zip
+export_example.zip
+.venv

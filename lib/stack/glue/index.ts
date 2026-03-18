@@ -43,6 +43,9 @@ export class GlueFactory extends Construct {
       resources: [s3Factory.exportsBucket.arnForObjects('exports/*')],
     }));
 
+    // S3 read access to CDK assets bucket so Glue can load the script
+    glueScript.grantRead(glueRole);
+
     // DynamoDB write access scoped to health-records table
     glueRole.addToPolicy(new iam.PolicyStatement({
       actions: ['dynamodb:PutItem', 'dynamodb:BatchWriteItem'],

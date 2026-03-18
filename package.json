@@ -8,7 +8,8 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "test_upload": "python scripts/test_upload.py --email tu@email.com --password 'TuPassword1!' --skip-create-user --file ./export_full.zip --timeout 600"
   },
   "devDependencies": {
     "@types/dotenv": "^6.1.1",
