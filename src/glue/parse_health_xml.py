@@ -35,8 +35,6 @@ handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
 logger.addHandler(handler)
 
 BATCH_SIZE = 25
-MAX_RETRIES = 5
-BASE_BACKOFF_SECONDS = 0.5
 
 HEALTH_RECORD_TYPES = {
     "HKQuantityTypeIdentifierHeartRate",
@@ -56,6 +54,44 @@ HEALTH_RECORD_TYPES = {
     "HKQuantityTypeIdentifierBodyMass",
     "HKQuantityTypeIdentifierBodyMassIndex",
     "HKQuantityTypeIdentifierBodyTemperature",
+    "HKQuantityTypeIdentifierPhysicalEffort",
+    "HKQuantityTypeIdentifierRunningPower",
+    "HKQuantityTypeIdentifierRunningSpeed",
+    "HKQuantityTypeIdentifierRunningStrideLength",
+    "HKQuantityTypeIdentifierRunningVerticalOscillation",
+    "HKQuantityTypeIdentifierRunningGroundContactTime",
+    "HKQuantityTypeIdentifierEnvironmentalAudioExposure",
+    "HKQuantityTypeIdentifierHeadphoneAudioExposure",
+    "HKQuantityTypeIdentifierVO2Max",
+    "HKQuantityTypeIdentifierWalkingSpeed",
+    "HKQuantityTypeIdentifierWalkingStepLength",
+    "HKQuantityTypeIdentifierWalkingAsymmetryPercentage",
+    "HKQuantityTypeIdentifierWalkingDoubleSupportPercentage",
+    "HKQuantityTypeIdentifierStairAscentSpeed",
+    "HKQuantityTypeIdentifierStairDescentSpeed",
+    "HKQuantityTypeIdentifierSixMinuteWalkTestDistance",
+    "HKQuantityTypeIdentifierAppleWalkingSteadiness",
+    "HKQuantityTypeIdentifierFlightsClimbed",
+    "HKQuantityTypeIdentifierDistanceCycling",
+    "HKQuantityTypeIdentifierDistanceSwimming",
+    "HKQuantityTypeIdentifierSwimmingStrokeCount",
+    "HKQuantityTypeIdentifierHeight",
+    "HKQuantityTypeIdentifierLeanBodyMass",
+    "HKQuantityTypeIdentifierBodyFatPercentage",
+    "HKQuantityTypeIdentifierBloodGlucose",
+    "HKQuantityTypeIdentifierInsulinDelivery",
+    "HKQuantityTypeIdentifierDietaryEnergyConsumed",
+    "HKQuantityTypeIdentifierDietaryCarbohydrates",
+    "HKQuantityTypeIdentifierDietaryFatTotal",
+    "HKQuantityTypeIdentifierDietaryProtein",
+    "HKQuantityTypeIdentifierDietaryWater",
+    "HKQuantityTypeIdentifierUVExposure",
+    "HKQuantityTypeIdentifierTimeInDaylight",
+    "HKCategoryTypeIdentifierMindfulSession",
+    "HKCategoryTypeIdentifierHighHeartRateEvent",
+    "HKCategoryTypeIdentifierLowHeartRateEvent",
+    "HKCategoryTypeIdentifierIrregularHeartRhythmEvent",
+    "HKCategoryTypeIdentifierAppleWalkingSteadinessEvent",
 }
 
 
@@ -102,85 +138,55 @@ def _find_xml_file(zf: zipfile.ZipFile) -> str | None:
 
 def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table: "boto3.resources.factory.dynamodb.Table") -> int:
     """Stream-parse the XML and batch-write records to DynamoDB."""
-    batch_index: dict = {}
+    seen_keys: set = set()
     total_written = 0
     records_skipped = 0
+    duplicates_skipped = 0
 
     context = ET.iterparse(xml_file, events=("end",))
 
-    for event, elem in context:
-        if elem.tag != "Record":
-            continue
+    with table.batch_writer(overwrite_by_pkeys=["PK", "SK"]) as writer:
+        for event, elem in context:
+            if elem.tag != "Record":
+                elem.clear()
+                continue
 
-        record_type = elem.get("type", "")
+            record_type = elem.get("type", "")
 
-        if record_type not in HEALTH_RECORD_TYPES:
-            records_skipped += 1
+            if record_type not in HEALTH_RECORD_TYPES:
+                records_skipped += 1
+                elem.clear()
+                continue
+
+            start_date = elem.get("startDate", "")
+            short_type = record_type.replace("HKQuantityTypeIdentifier", "").replace("HKCategoryTypeIdentifier", "")
+            sk = f"RECORD#{short_type}#{start_date}"
+            key = f"USER#{user_id}|{sk}"
+
+            if key in seen_keys:
+                duplicates_skipped += 1
+                elem.clear()
+                continue
+            seen_keys.add(key)
+
+            writer.put_item(Item={
+                "PK": f"USER#{user_id}",
+                "SK": sk,
+                "GSI1SK": f"{short_type}#{start_date}",
+                "recordType": short_type,
+                "value": elem.get("value", ""),
+                "unit": elem.get("unit", ""),
+                "startDate": start_date,
+                "creationDate": elem.get("creationDate", ""),
+            })
+            total_written += 1
             elem.clear()
-            continue
 
-        start_date = elem.get("startDate", "")
-        value = elem.get("value", "")
-        unit = elem.get("unit", "")
-        source_name = elem.get("sourceName", "")
-        creation_date = elem.get("creationDate", "")
-
-        short_type = record_type.replace("HKQuantityTypeIdentifier", "").replace("HKCategoryTypeIdentifier", "")
-
-        item = {
-            "PK": f"USER#{user_id}",
-            "SK": f"RECORD#{short_type}#{start_date}",
-            "GSI1SK": f"{short_type}#{start_date}",
-            "recordType": short_type,
-            "value": value,
-            "unit": unit,
-            "startDate": start_date,
-            "creationDate": creation_date,
-        }
-
-        key = (item["PK"], item["SK"])
-        batch_index[key] = item
-        elem.clear()
-
-        if len(batch_index) >= BATCH_SIZE:
-            items = list(batch_index.values())
-            _write_batch(table, items)
-            total_written += len(items)
-            batch_index = {}
-
-            if total_written % 1000 == 0:
+            if total_written % 10000 == 0:
                 logger.info("Progress: %d records written", total_written)
 
-
-    if batch_index:
-        items = list(batch_index.values())
-        _write_batch(table, items)
-        total_written += len(items)
-
-    logger.info("Skipped %d records of non-tracked types", records_skipped)
+    logger.info("Skipped %d non-tracked, %d duplicates", records_skipped, duplicates_skipped)
     return total_written
-
-
-def _write_batch(table: "boto3.resources.factory.dynamodb.Table", items: list[dict]) -> None:
-    """Write a batch of items to DynamoDB with exponential backoff."""
-    with table.batch_writer() as writer:
-        for item in items:
-            for attempt in range(MAX_RETRIES):
-                try:
-                    writer.put_item(Item=item)
-                    break
-                except ClientError as e:
-                    if e.response["Error"]["Code"] == "ProvisionedThroughputExceededException":
-                        wait_time = BASE_BACKOFF_SECONDS * (2 ** attempt)
-                        logger.warning(
-                            "Throttled on write, retrying in %.1fs (attempt %d/%d)",
-                            wait_time,
-                            attempt + 1,
-                            MAX_RETRIES,
-                        )
-                        time.sleep(wait_time)
-                    else:
-                        raise
 
 
 if __name__ == "__main__":

@@ -64,7 +64,7 @@ export class GlueFactory extends Construct {
         pythonVersion: '3.9',
         scriptLocation: glueScript.s3ObjectUrl,
       },
-      maxCapacity: 0.0625,
+      maxCapacity: 1,
       defaultArguments: {
         '--TABLE_NAME': dynamoFactory.healthRecordsTable.tableName,
         '--enable-metrics': 'true',
