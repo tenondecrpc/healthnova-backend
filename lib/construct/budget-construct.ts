@@ -78,12 +78,6 @@ export class BudgetConstruct extends Construct {
       ],
     });
 
-    new ce.CfnAnomalyMonitor(this, 'AnomalyMonitor', {
-      monitorName: `${params.projectName}-${params.envName}-anomaly-monitor`,
-      monitorType: 'DIMENSIONAL',
-      monitorDimension: 'SERVICE',
-    });
-
     new ce.CfnAnomalySubscription(this, 'AnomalySubscription', {
       subscriptionName: `${params.projectName}-${params.envName}-anomaly-alerts`,
       monitorArnList: [],

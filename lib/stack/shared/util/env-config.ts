@@ -1,7 +1,7 @@
 import * as dotenv from 'dotenv';
 
 export interface EnvironmentConfig {
-  account?: string;
+  accountId?: string;
   region?: string;
 }
 
@@ -25,7 +25,7 @@ export function loadEnvironment(): AppConfig {
   }
 
   const env: EnvironmentConfig = {
-    account: process.env.AWS_ACCOUNT,
+    accountId: process.env.AWS_ACCOUNT_ID,
     region: process.env.AWS_REGION,
   };
   

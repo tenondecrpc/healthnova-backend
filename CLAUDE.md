@@ -119,7 +119,7 @@ All OpenSpec artifacts live in `/openspec/changes/[change-name]/`
 ## Environment Variables
 
 Set in `.env` (see `.env.example`):
-- `AWS_ACCOUNT`: Target AWS account
+- `AWS_ACCOUNT_ID`: Target AWS account
 - `AWS_REGION`: Deployment region
 - `STAGE`: dev/staging/prod
 

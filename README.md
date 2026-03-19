@@ -65,7 +65,7 @@ Edit `.env` with your values:
 # Core app
 ENV_NAME=dev
 PROJECT_NAME=healthnova
-AWS_ACCOUNT=xxxxxxxx672
+AWS_ACCOUNT_ID=xxxxxxxx672
 AWS_REGION=us-east-1
 
 # CORS Configuration

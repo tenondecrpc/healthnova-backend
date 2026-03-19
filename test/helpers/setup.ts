@@ -4,7 +4,7 @@ import { MainStack } from '../../lib/stack/main-stack';
 
 // Use environment variables if available, otherwise use generic test values
 export const TEST_ENV = {
-  account: process.env.AWS_ACCOUNT || 'xxxxxxxx672',
+  account: process.env.AWS_ACCOUNT_ID || 'xxxxxxxx672',
   region: process.env.AWS_REGION || 'us-east-1',
 };
 

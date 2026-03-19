@@ -13,8 +13,8 @@ const mainStackName = `${capitalizeFirstLetter(projectName)}${capitalizeFirstLet
 new MainStack(app, mainStackName, {
   env,
   params,
-  githubOrg: process.env.GITHUB_ORG ?? '',
-  githubRepo: process.env.GITHUB_REPO ?? '',
+  githubOrg: process.env.GH_ORG ?? '',
+  githubRepo: process.env.GH_REPO ?? '',
   monthlyBudgetUsd: Number(process.env.MONTHLY_BUDGET_USD ?? '100'),
   budgetAlertEmails: (process.env.BUDGET_ALERT_EMAILS ?? '').split(',').filter(Boolean),
 });
