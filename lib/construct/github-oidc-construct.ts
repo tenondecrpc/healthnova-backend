@@ -83,6 +83,15 @@ export class GithubOidcConstruct extends Construct {
       resources: ['*'],
     }));
 
+    this.role.addToPolicy(new iam.PolicyStatement({
+      sid: 'CdkBootstrapLookupRole',
+      effect: iam.Effect.ALLOW,
+      actions: ['sts:AssumeRole'],
+      resources: [
+        `arn:aws:iam::${cdk.Stack.of(this).account}:role/cdk-*-lookup-role-*`,
+      ],
+    }));
+
     this.roleArn = this.role.roleArn;
   }
 }

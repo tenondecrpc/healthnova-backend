@@ -16,6 +16,10 @@ jobs:
   cost-estimate:
     name: Infracost CDK Diff
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -34,12 +38,12 @@ jobs:
       - name: CDK Synth (current branch)
         run: npx cdk synth --output cdk.out.current
         env:
-          ENV_NAME: ${{ secrets.ENV_NAME }}
-          PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
+          PROJECT_NAME: ${{ vars.PROJECT_NAME }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           GITHUB_ORG: ${{ vars.GH_ORG }}
           GH_REPO: ${{ github.event.repository.name }}
-          MONTHLY_BUDGET_USD: ${{ secrets.MONTHLY_BUDGET_USD }}
+          MONTHLY_BUDGET_USD: ${{ vars.MONTHLY_BUDGET_USD }}
           BUDGET_ALERT_EMAILS: ${{ secrets.BUDGET_ALERT_EMAILS }}
 
       - name: CDK Synth (base branch)
@@ -52,12 +56,12 @@ jobs:
           git checkout -
           git stash pop || true
         env:
-          ENV_NAME: ${{ secrets.ENV_NAME }}
-          PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
+          PROJECT_NAME: ${{ vars.PROJECT_NAME }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           GITHUB_ORG: ${{ vars.GH_ORG }}
           GH_REPO: ${{ github.event.repository.name }}
-          MONTHLY_BUDGET_USD: ${{ secrets.MONTHLY_BUDGET_USD }}
+          MONTHLY_BUDGET_USD: ${{ vars.MONTHLY_BUDGET_USD }}
           BUDGET_ALERT_EMAILS: ${{ secrets.BUDGET_ALERT_EMAILS }}
 
       - uses: infracost/actions/setup@v3
@@ -66,13 +70,20 @@ jobs:
 
       - name: Infracost diff
         run: |
+          infracost breakdown \
+            --path cdk.out.base \
+            --format json \
+            --out-file infracost-base.json
+
           infracost diff \
             --path cdk.out.current \
-            --compare-to cdk.out.base \
+            --compare-to infracost-base.json \
             --format json \
             --out-file infracost.json
 
-      - uses: infracost/actions/comment@v3
-        with:
-          path: infracost.json
-          behavior: update
+          infracost comment github \
+            --path infracost.json \
+            --repo ${{ github.repository }} \
+            --pull-request ${{ github.event.pull_request.number }} \
+            --github-token ${{ secrets.GITHUB_TOKEN }} \
+            --behavior update
