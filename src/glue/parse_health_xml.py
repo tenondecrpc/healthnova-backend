@@ -3,7 +3,7 @@ AWS Glue Python Shell script for parsing Apple Health exportar.xml.
 
 Streams the XML from S3 using iterparse to maintain O(1) memory usage
 regardless of file size. Writes normalized health records to DynamoDB
-in batches with exponential backoff.
+using parallel batch writers for throughput.
 
 Arguments (passed via Step Functions):
   --BUCKET: S3 bucket name
@@ -18,12 +18,11 @@ from __future__ import annotations
 import io
 import logging
 import sys
-import time
 import xml.etree.ElementTree as ET
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import boto3
-from botocore.exceptions import ClientError
 
 # Glue job arguments
 from awsglue.utils import getResolvedOptions
@@ -34,7 +33,8 @@ handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
 logger.addHandler(handler)
 
-BATCH_SIZE = 25
+WRITE_CHUNK_SIZE = 1000
+WRITE_WORKERS = 8
 
 HEALTH_RECORD_TYPES = {
     "HKQuantityTypeIdentifierHeartRate",
@@ -137,56 +137,78 @@ def _find_xml_file(zf: zipfile.ZipFile) -> str | None:
 
 
 def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table: "boto3.resources.factory.dynamodb.Table") -> int:
-    """Stream-parse the XML and batch-write records to DynamoDB."""
+    """Stream-parse the XML and write records to DynamoDB with parallel batch writers."""
     seen_keys: set = set()
     total_written = 0
     records_skipped = 0
     duplicates_skipped = 0
+    chunk: list[dict] = []
 
     context = ET.iterparse(xml_file, events=("end",))
+    executor = ThreadPoolExecutor(max_workers=WRITE_WORKERS)
+    futures = []
 
-    with table.batch_writer(overwrite_by_pkeys=["PK", "SK"]) as writer:
-        for event, elem in context:
-            if elem.tag != "Record":
-                elem.clear()
-                continue
-
-            record_type = elem.get("type", "")
-
-            if record_type not in HEALTH_RECORD_TYPES:
-                records_skipped += 1
-                elem.clear()
-                continue
-
-            start_date = elem.get("startDate", "")
-            short_type = record_type.replace("HKQuantityTypeIdentifier", "").replace("HKCategoryTypeIdentifier", "")
-            sk = f"RECORD#{short_type}#{start_date}"
-            key = f"USER#{user_id}|{sk}"
-
-            if key in seen_keys:
-                duplicates_skipped += 1
-                elem.clear()
-                continue
-            seen_keys.add(key)
-
-            writer.put_item(Item={
-                "PK": f"USER#{user_id}",
-                "SK": sk,
-                "GSI1SK": f"{short_type}#{start_date}",
-                "recordType": short_type,
-                "value": elem.get("value", ""),
-                "unit": elem.get("unit", ""),
-                "startDate": start_date,
-                "creationDate": elem.get("creationDate", ""),
-            })
-            total_written += 1
+    for event, elem in context:
+        if elem.tag != "Record":
             elem.clear()
+            continue
+
+        record_type = elem.get("type", "")
+
+        if record_type not in HEALTH_RECORD_TYPES:
+            records_skipped += 1
+            elem.clear()
+            continue
+
+        start_date = elem.get("startDate", "")
+        short_type = record_type.replace("HKQuantityTypeIdentifier", "").replace("HKCategoryTypeIdentifier", "")
+        sk = f"RECORD#{short_type}#{start_date}"
+        key = f"USER#{user_id}|{sk}"
+
+        if key in seen_keys:
+            duplicates_skipped += 1
+            elem.clear()
+            continue
+        seen_keys.add(key)
+
+        chunk.append({
+            "PK": f"USER#{user_id}",
+            "SK": sk,
+            "GSI1SK": f"{short_type}#{start_date}",
+            "recordType": short_type,
+            "value": elem.get("value", ""),
+            "unit": elem.get("unit", ""),
+            "startDate": start_date,
+            "creationDate": elem.get("creationDate", ""),
+        })
+        elem.clear()
+
+        if len(chunk) >= WRITE_CHUNK_SIZE:
+            futures.append(executor.submit(_write_chunk, table, chunk))
+            total_written += len(chunk)
+            chunk = []
 
             if total_written % 10000 == 0:
                 logger.info("Progress: %d records written", total_written)
 
+    if chunk:
+        futures.append(executor.submit(_write_chunk, table, chunk))
+        total_written += len(chunk)
+
+    for future in as_completed(futures):
+        future.result()
+
+    executor.shutdown(wait=True)
+
     logger.info("Skipped %d non-tracked, %d duplicates", records_skipped, duplicates_skipped)
     return total_written
+
+
+def _write_chunk(table: "boto3.resources.factory.dynamodb.Table", items: list[dict]) -> None:
+    """Write a chunk of items to DynamoDB using batch_writer."""
+    with table.batch_writer(overwrite_by_pkeys=["PK", "SK"]) as writer:
+        for item in items:
+            writer.put_item(Item=item)
 
 
 if __name__ == "__main__":
