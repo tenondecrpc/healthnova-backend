@@ -32,6 +32,7 @@ export class GlueFactory extends Construct {
       maxRetries: 1,
       defaultArguments: {
         '--TABLE_NAME': dynamoFactory.healthRecordsTable.tableName,
+        '--additional-python-modules': 'lxml',
       },
     });
 

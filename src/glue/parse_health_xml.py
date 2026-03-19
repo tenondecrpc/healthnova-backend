@@ -1,9 +1,8 @@
 """
 AWS Glue Python Shell script for parsing Apple Health exportar.xml.
 
-Streams the XML from S3 using iterparse to maintain O(1) memory usage
-regardless of file size. Writes normalized health records to DynamoDB
-using parallel batch writers for throughput.
+Streams the XML from S3 using lxml iterparse for fast O(1) memory parsing.
+Writes normalized health records to DynamoDB using parallel batch writers.
 
 Arguments (passed via Step Functions):
   --BUCKET: S3 bucket name
@@ -18,9 +17,10 @@ from __future__ import annotations
 import io
 import logging
 import sys
-import xml.etree.ElementTree as ET
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from lxml import etree
 
 import boto3
 
@@ -33,65 +33,65 @@ handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
 logger.addHandler(handler)
 
-WRITE_CHUNK_SIZE = 1000
-WRITE_WORKERS = 8
+WRITE_CHUNK_SIZE = 2500
+WRITE_WORKERS = 16
 
 HEALTH_RECORD_TYPES = {
-    "HKQuantityTypeIdentifierHeartRate",
-    "HKQuantityTypeIdentifierHeartRateVariabilitySDNN",
-    "HKQuantityTypeIdentifierBloodPressureSystolic",
-    "HKQuantityTypeIdentifierBloodPressureDiastolic",
-    "HKQuantityTypeIdentifierOxygenSaturation",
-    "HKQuantityTypeIdentifierRespiratoryRate",
-    "HKQuantityTypeIdentifierRestingHeartRate",
-    "HKQuantityTypeIdentifierWalkingHeartRateAverage",
-    "HKCategoryTypeIdentifierSleepAnalysis",
-    "HKQuantityTypeIdentifierStepCount",
-    "HKQuantityTypeIdentifierDistanceWalkingRunning",
-    "HKQuantityTypeIdentifierActiveEnergyBurned",
-    "HKQuantityTypeIdentifierBasalEnergyBurned",
-    "HKQuantityTypeIdentifierAppleExerciseTime",
-    "HKQuantityTypeIdentifierBodyMass",
-    "HKQuantityTypeIdentifierBodyMassIndex",
-    "HKQuantityTypeIdentifierBodyTemperature",
-    "HKQuantityTypeIdentifierPhysicalEffort",
-    "HKQuantityTypeIdentifierRunningPower",
-    "HKQuantityTypeIdentifierRunningSpeed",
-    "HKQuantityTypeIdentifierRunningStrideLength",
-    "HKQuantityTypeIdentifierRunningVerticalOscillation",
-    "HKQuantityTypeIdentifierRunningGroundContactTime",
-    "HKQuantityTypeIdentifierEnvironmentalAudioExposure",
-    "HKQuantityTypeIdentifierHeadphoneAudioExposure",
-    "HKQuantityTypeIdentifierVO2Max",
-    "HKQuantityTypeIdentifierWalkingSpeed",
-    "HKQuantityTypeIdentifierWalkingStepLength",
-    "HKQuantityTypeIdentifierWalkingAsymmetryPercentage",
-    "HKQuantityTypeIdentifierWalkingDoubleSupportPercentage",
-    "HKQuantityTypeIdentifierStairAscentSpeed",
-    "HKQuantityTypeIdentifierStairDescentSpeed",
-    "HKQuantityTypeIdentifierSixMinuteWalkTestDistance",
-    "HKQuantityTypeIdentifierAppleWalkingSteadiness",
-    "HKQuantityTypeIdentifierFlightsClimbed",
-    "HKQuantityTypeIdentifierDistanceCycling",
-    "HKQuantityTypeIdentifierDistanceSwimming",
-    "HKQuantityTypeIdentifierSwimmingStrokeCount",
-    "HKQuantityTypeIdentifierHeight",
-    "HKQuantityTypeIdentifierLeanBodyMass",
-    "HKQuantityTypeIdentifierBodyFatPercentage",
-    "HKQuantityTypeIdentifierBloodGlucose",
-    "HKQuantityTypeIdentifierInsulinDelivery",
-    "HKQuantityTypeIdentifierDietaryEnergyConsumed",
-    "HKQuantityTypeIdentifierDietaryCarbohydrates",
-    "HKQuantityTypeIdentifierDietaryFatTotal",
-    "HKQuantityTypeIdentifierDietaryProtein",
-    "HKQuantityTypeIdentifierDietaryWater",
-    "HKQuantityTypeIdentifierUVExposure",
-    "HKQuantityTypeIdentifierTimeInDaylight",
-    "HKCategoryTypeIdentifierMindfulSession",
-    "HKCategoryTypeIdentifierHighHeartRateEvent",
-    "HKCategoryTypeIdentifierLowHeartRateEvent",
-    "HKCategoryTypeIdentifierIrregularHeartRhythmEvent",
-    "HKCategoryTypeIdentifierAppleWalkingSteadinessEvent",
+    "HKQuantityTypeIdentifierHeartRate": "HeartRate",
+    "HKQuantityTypeIdentifierHeartRateVariabilitySDNN": "HeartRateVariabilitySDNN",
+    "HKQuantityTypeIdentifierBloodPressureSystolic": "BloodPressureSystolic",
+    "HKQuantityTypeIdentifierBloodPressureDiastolic": "BloodPressureDiastolic",
+    "HKQuantityTypeIdentifierOxygenSaturation": "OxygenSaturation",
+    "HKQuantityTypeIdentifierRespiratoryRate": "RespiratoryRate",
+    "HKQuantityTypeIdentifierRestingHeartRate": "RestingHeartRate",
+    "HKQuantityTypeIdentifierWalkingHeartRateAverage": "WalkingHeartRateAverage",
+    "HKCategoryTypeIdentifierSleepAnalysis": "SleepAnalysis",
+    "HKQuantityTypeIdentifierStepCount": "StepCount",
+    "HKQuantityTypeIdentifierDistanceWalkingRunning": "DistanceWalkingRunning",
+    "HKQuantityTypeIdentifierActiveEnergyBurned": "ActiveEnergyBurned",
+    "HKQuantityTypeIdentifierBasalEnergyBurned": "BasalEnergyBurned",
+    "HKQuantityTypeIdentifierAppleExerciseTime": "AppleExerciseTime",
+    "HKQuantityTypeIdentifierBodyMass": "BodyMass",
+    "HKQuantityTypeIdentifierBodyMassIndex": "BodyMassIndex",
+    "HKQuantityTypeIdentifierBodyTemperature": "BodyTemperature",
+    "HKQuantityTypeIdentifierPhysicalEffort": "PhysicalEffort",
+    "HKQuantityTypeIdentifierRunningPower": "RunningPower",
+    "HKQuantityTypeIdentifierRunningSpeed": "RunningSpeed",
+    "HKQuantityTypeIdentifierRunningStrideLength": "RunningStrideLength",
+    "HKQuantityTypeIdentifierRunningVerticalOscillation": "RunningVerticalOscillation",
+    "HKQuantityTypeIdentifierRunningGroundContactTime": "RunningGroundContactTime",
+    "HKQuantityTypeIdentifierEnvironmentalAudioExposure": "EnvironmentalAudioExposure",
+    "HKQuantityTypeIdentifierHeadphoneAudioExposure": "HeadphoneAudioExposure",
+    "HKQuantityTypeIdentifierVO2Max": "VO2Max",
+    "HKQuantityTypeIdentifierWalkingSpeed": "WalkingSpeed",
+    "HKQuantityTypeIdentifierWalkingStepLength": "WalkingStepLength",
+    "HKQuantityTypeIdentifierWalkingAsymmetryPercentage": "WalkingAsymmetryPercentage",
+    "HKQuantityTypeIdentifierWalkingDoubleSupportPercentage": "WalkingDoubleSupportPercentage",
+    "HKQuantityTypeIdentifierStairAscentSpeed": "StairAscentSpeed",
+    "HKQuantityTypeIdentifierStairDescentSpeed": "StairDescentSpeed",
+    "HKQuantityTypeIdentifierSixMinuteWalkTestDistance": "SixMinuteWalkTestDistance",
+    "HKQuantityTypeIdentifierAppleWalkingSteadiness": "AppleWalkingSteadiness",
+    "HKQuantityTypeIdentifierFlightsClimbed": "FlightsClimbed",
+    "HKQuantityTypeIdentifierDistanceCycling": "DistanceCycling",
+    "HKQuantityTypeIdentifierDistanceSwimming": "DistanceSwimming",
+    "HKQuantityTypeIdentifierSwimmingStrokeCount": "SwimmingStrokeCount",
+    "HKQuantityTypeIdentifierHeight": "Height",
+    "HKQuantityTypeIdentifierLeanBodyMass": "LeanBodyMass",
+    "HKQuantityTypeIdentifierBodyFatPercentage": "BodyFatPercentage",
+    "HKQuantityTypeIdentifierBloodGlucose": "BloodGlucose",
+    "HKQuantityTypeIdentifierInsulinDelivery": "InsulinDelivery",
+    "HKQuantityTypeIdentifierDietaryEnergyConsumed": "DietaryEnergyConsumed",
+    "HKQuantityTypeIdentifierDietaryCarbohydrates": "DietaryCarbohydrates",
+    "HKQuantityTypeIdentifierDietaryFatTotal": "DietaryFatTotal",
+    "HKQuantityTypeIdentifierDietaryProtein": "DietaryProtein",
+    "HKQuantityTypeIdentifierDietaryWater": "DietaryWater",
+    "HKQuantityTypeIdentifierUVExposure": "UVExposure",
+    "HKQuantityTypeIdentifierTimeInDaylight": "TimeInDaylight",
+    "HKCategoryTypeIdentifierMindfulSession": "MindfulSession",
+    "HKCategoryTypeIdentifierHighHeartRateEvent": "HighHeartRateEvent",
+    "HKCategoryTypeIdentifierLowHeartRateEvent": "LowHeartRateEvent",
+    "HKCategoryTypeIdentifierIrregularHeartRhythmEvent": "IrregularHeartRhythmEvent",
+    "HKCategoryTypeIdentifierAppleWalkingSteadinessEvent": "AppleWalkingSteadinessEvent",
 }
 
 
@@ -137,42 +137,32 @@ def _find_xml_file(zf: zipfile.ZipFile) -> str | None:
 
 
 def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table: "boto3.resources.factory.dynamodb.Table") -> int:
-    """Stream-parse the XML and write records to DynamoDB with parallel batch writers."""
-    seen_keys: set = set()
+    """Stream-parse the XML with lxml and write records to DynamoDB with parallel batch writers."""
     total_written = 0
     records_skipped = 0
-    duplicates_skipped = 0
     chunk: list[dict] = []
+    pk = f"USER#{user_id}"
 
-    context = ET.iterparse(xml_file, events=("end",))
+    context = etree.iterparse(xml_file, events=("end",), tag="Record")
     executor = ThreadPoolExecutor(max_workers=WRITE_WORKERS)
     futures = []
 
-    for event, elem in context:
-        if elem.tag != "Record":
-            elem.clear()
-            continue
-
+    for _, elem in context:
         record_type = elem.get("type", "")
+        short_type = HEALTH_RECORD_TYPES.get(record_type)
 
-        if record_type not in HEALTH_RECORD_TYPES:
+        if short_type is None:
             records_skipped += 1
             elem.clear()
+            while elem.getprevious() is not None:
+                del elem.getparent()[0]
             continue
 
         start_date = elem.get("startDate", "")
-        short_type = record_type.replace("HKQuantityTypeIdentifier", "").replace("HKCategoryTypeIdentifier", "")
         sk = f"RECORD#{short_type}#{start_date}"
-        key = f"USER#{user_id}|{sk}"
-
-        if key in seen_keys:
-            duplicates_skipped += 1
-            elem.clear()
-            continue
-        seen_keys.add(key)
 
         chunk.append({
-            "PK": f"USER#{user_id}",
+            "PK": pk,
             "SK": sk,
             "GSI1SK": f"{short_type}#{start_date}",
             "recordType": short_type,
@@ -182,13 +172,15 @@ def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table: "b
             "creationDate": elem.get("creationDate", ""),
         })
         elem.clear()
+        while elem.getprevious() is not None:
+            del elem.getparent()[0]
 
         if len(chunk) >= WRITE_CHUNK_SIZE:
             futures.append(executor.submit(_write_chunk, table, chunk))
             total_written += len(chunk)
             chunk = []
 
-            if total_written % 10000 == 0:
+            if total_written % 50000 == 0:
                 logger.info("Progress: %d records written", total_written)
 
     if chunk:
@@ -200,7 +192,7 @@ def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table: "b
 
     executor.shutdown(wait=True)
 
-    logger.info("Skipped %d non-tracked, %d duplicates", records_skipped, duplicates_skipped)
+    logger.info("Skipped %d non-tracked records", records_skipped)
     return total_written
 
 
