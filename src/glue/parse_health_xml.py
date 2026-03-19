@@ -20,7 +20,7 @@ import logging
 import sys
 import time
 import zipfile
-from concurrent.futures import ThreadPoolExecutor, as_completed, Future
+from concurrent.futures import ThreadPoolExecutor, Future
 
 from lxml import etree
 
@@ -36,8 +36,8 @@ handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
 logger.addHandler(handler)
 
 BATCH_WRITE_SIZE = 25
-WRITE_WORKERS = 32
-MAX_INFLIGHT = 128
+WRITE_WORKERS = 48
+MAX_INFLIGHT = 320
 NUM_SHARDS = 10
 
 HEALTH_RECORD_TYPES = {
@@ -127,7 +127,7 @@ def main() -> None:
     logger.info("Parsing XML file: %s", xml_filename)
 
     with zf.open(xml_filename) as xml_file:
-        records_written = _stream_parse_and_write(xml_file, user_id, table_name, dynamodb_client)
+        records_written = _stream_parse_and_write(xml_file, user_id, job_id, table_name, dynamodb_client)
 
     zf.close()
     logger.info("Completed: %d health records written for user %s", records_written, user_id)
@@ -141,10 +141,9 @@ def _find_xml_file(zf: zipfile.ZipFile) -> str | None:
     return None
 
 
-def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table_name: str, dynamodb_client) -> int:
+def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, job_id: str, table_name: str, dynamodb_client) -> int:
     total_submitted = 0
     records_skipped = 0
-    shard_idx = 0
     batch: list[dict] = []
 
     context = etree.iterparse(xml_file, events=("end",), tag="Record")
@@ -173,8 +172,8 @@ def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table_nam
 
         start_date = elem.get("startDate", "")
         sk = f"RECORD#{short_type}#{start_date}"
-        pk = f"USER#{user_id}#SHARD#{shard_idx}"
-        shard_idx = (shard_idx + 1) % NUM_SHARDS
+        shard = hash(sk) % NUM_SHARDS
+        pk = f"USER#{user_id}#SHARD#{shard}"
 
         batch.append({
             "PutRequest": {
@@ -187,6 +186,7 @@ def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table_nam
                     "unit": {"S": elem.get("unit", "")},
                     "startDate": {"S": start_date},
                     "creationDate": {"S": elem.get("creationDate", "")},
+                    "jobId": {"S": job_id},
                 }
             }
         })
@@ -233,7 +233,7 @@ def _wait_any(futures: set[Future]) -> tuple[set[Future], set[Future]]:
 
 def _write_batch(client, table_name: str, items: list[dict]) -> int:
     request = {table_name: items}
-    max_retries = 8
+    max_retries = 3
 
     for attempt in range(max_retries):
         response = client.batch_write_item(RequestItems=request)

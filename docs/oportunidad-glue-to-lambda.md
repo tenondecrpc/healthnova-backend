@@ -1,52 +1,56 @@
 # Oportunidad: Migrar procesamiento Glue → Lambda
 
-## Problema actual
+## Contexto actual (datos reales)
 
-El job de AWS Glue tiene un cold start de **2-5 minutos** cada vez que se activa (cada upload de un export de Apple Health). Esto introduce una latencia significativa en el flujo de procesamiento.
-
-Intentar reducir la latencia bajando los DPUs al mínimo (2) empeora el rendimiento: el procesamiento pasa de ~1 min a ~30 min por la falta de paralelismo.
+El job de AWS Glue ETL (G.1X, 2 workers) procesa ~2M registros en **~9 min** end-to-end incluyendo cold start. El cold start de Glue representa estimativamente 2-4 min de ese total — tiempo en el que el usuario espera sin progreso real.
 
 ## Oportunidad
 
 Reemplazar el job de Glue con una **Lambda function** para el parsing del XML de Apple Health.
 
-### Por qué Lambda funciona aquí
+### Por qué Lambda sigue siendo viable
 
-- Cold start en milisegundos vs. 2-5 min de Glue
-- Los exports de Apple Health típicos son 50-500 MB — manejable con Lambda de 3 GB RAM y 15 min de timeout
-- El diseño ya contempla streaming XML para archivos grandes (no se carga todo en memoria)
-- Más barato para este volumen de procesamiento
+- Cold start en milisegundos vs. ~2-4 min de Glue ETL
+- El script actual ya no usa Spark — es Python puro con `lxml` + `ThreadPoolExecutor`, portable directamente a Lambda
+- El parsing real toma ~5-6 min (sin cold start de Glue), dentro del timeout de 15 min de Lambda
+- Más barato a este volumen
 
 ### Limitaciones a considerar
 
-- **Timeout de 15 min**: exports muy grandes o usuarios con años de datos podrían superar el límite
-- **Memoria máxima 10 GB**: si el XML descomprimido excede esto, Lambda no es viable
-- **Sin Spark**: transformaciones que requieran joins distribuidos seguirían necesitando Glue o similar
+- **Timeout de 15 min**: usuarios con exports muy grandes (años de datos, >3M registros) podrían acercarse al límite. Necesita validación con casos extremos.
+- **Carga del ZIP en memoria**: el script actual hace `obj["Body"].read()` — carga el ZIP completo. Un Lambda de 10 GB RAM lo maneja, pero es un punto a revisar si los exports crecen.
+- **Sin Spark**: no es un problema — el script actual no lo usa para el procesamiento real.
 
 ## Análisis de Costos
 
-### Glue (estado actual: 1 DPU)
-- **Costo por DPU-hora**: $0.44
-- **Por ejecución** (2-5 min): $0.015 - $0.037
-- **Supuesto**: 50 uploads/día → ~$0.75 - $1.85 / día (~$23-55 / mes)
+### Glue ETL (estado actual: G.1X, 2 workers)
 
-### Lambda (3 GB RAM, 10 min promedio)
-- **Costo**: $0.0000166667 por GB-segundo
-- **Por ejecución** (10 min): 3 GB × 600 s = $0.03 / ejecución
-- **Por 50 uploads/día**: $1.50 / día (~$45 / mes)
+- DPU por run: 2 workers × 2 DPU = 4 DPU
+- Duración: ~8.9 min = 0.148 h
+- **Por ejecución**: 4 DPU × 0.148 h × $0.44 = **~$0.26**
+- **30 runs/mes (1/día)**: **~$7.83/mes**
+
+### Lambda (10 GB RAM, ~6 min procesamiento real)
+
+- Costo: $0.0000166667/GB-segundo
+- Por ejecución: 10 GB × 360 s × $0.0000166667 = **~$0.06**
+- **30 runs/mes (1/día)**: **~$1.80/mes**
 
 ### Resultado
-- **Glue actual**: ~$23-55 / mes (dependiendo de volumen)
-- **Lambda propuesto**: ~$45 / mes
-- **Diferencia**: Muy similar en costo, pero Lambda elimina 2-5 min de cold start por upload
 
-### Trade-off
-El costo es prácticamente equivalente. La ventaja de Lambda es la **reducción de latencia** (cold start de 2-5 min → <1 seg), lo cual mejora significativamente la UX. El costo operacional no es un diferenciador.
+| | Costo/run | Costo/mes (30 runs) | Cold start |
+|---|---|---|---|
+| Glue ETL (actual) | $0.26 | $7.83 | ~2-4 min |
+| Lambda (propuesto) | $0.06 | $1.80 | <1 seg |
+
+Lambda es **~4x más barato** y elimina el cold start.
 
 ## Recomendación
 
-Para la mayoría de usuarios, Lambda es suficiente. Si se identifican exports que superen los límites, se puede implementar una estrategia híbrida: Lambda para el caso común, Glue como fallback para archivos grandes.
+La migración es técnicamente directa (el código Python no depende de Glue/Spark). El principal riesgo es el timeout de 15 min para exports muy grandes. Validar con el export más grande disponible antes de eliminar Glue.
+
+Estrategia sugerida: Lambda como caso principal, Glue como fallback si Lambda supera los 12 min.
 
 ## Estado
 
-Oportunidad identificada — no priorizada aún. Revisar cuando el cold start de Glue sea un bloqueante real para la experiencia del usuario.
+Oportunidad identificada — no priorizada aún. Revisar cuando el cold start de Glue sea un bloqueante real para la UX, o cuando el volumen de procesamiento aumente.
