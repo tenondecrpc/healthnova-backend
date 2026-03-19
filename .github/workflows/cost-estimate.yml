@@ -16,6 +16,10 @@ jobs:
   cost-estimate:
     name: Infracost CDK Diff
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
