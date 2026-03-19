@@ -269,7 +269,7 @@ export class GlueConstruct extends Construct {
 
     const jobCommand: glue.CfnJob.JobCommandProperty = {
       name: jobType,
-      pythonVersion,
+      ...(isShell && { pythonVersion }),
       scriptLocation: this.scriptAsset.s3ObjectUrl,
     };
 

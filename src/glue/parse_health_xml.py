@@ -1,14 +1,15 @@
 """
-AWS Glue Python Shell script for parsing Apple Health exportar.xml.
+AWS Glue ETL script for parsing Apple Health exportar.xml.
 
-Streams the XML from S3 using lxml iterparse for fast O(1) memory parsing.
-Writes normalized health records to DynamoDB using parallel batch writers.
+Runs on a G.1X driver (4 vCPU, 16GB RAM) for fast XML parsing with lxml.
+Uses ThreadPoolExecutor for parallel DynamoDB batch writes.
+Spark is initialized only to satisfy the Glue ETL runtime requirement.
 
 Arguments (passed via Step Functions):
   --BUCKET: S3 bucket name
   --KEY: S3 object key for the export ZIP
   --USER_ID: User ID for record association
-  --JOB_ID: Job ID for tracking
+  --HEALTH_JOB_ID: Job ID for tracking
   --TABLE_NAME: DynamoDB table name
 """
 
@@ -17,15 +18,16 @@ from __future__ import annotations
 import io
 import logging
 import sys
+import time
 import zipfile
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, Future
 
 from lxml import etree
 
 import boto3
-
-# Glue job arguments
 from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
 
 logger = logging.getLogger("parse_health_xml")
 logger.setLevel(logging.INFO)
@@ -33,8 +35,10 @@ handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
 logger.addHandler(handler)
 
-WRITE_CHUNK_SIZE = 2500
-WRITE_WORKERS = 16
+BATCH_WRITE_SIZE = 25
+WRITE_WORKERS = 32
+MAX_INFLIGHT = 128
+NUM_SHARDS = 10
 
 HEALTH_RECORD_TYPES = {
     "HKQuantityTypeIdentifierHeartRate": "HeartRate",
@@ -96,19 +100,21 @@ HEALTH_RECORD_TYPES = {
 
 
 def main() -> None:
-    args = getResolvedOptions(sys.argv, ["BUCKET", "KEY", "USER_ID", "JOB_ID", "TABLE_NAME"])
+    args = getResolvedOptions(sys.argv, ["BUCKET", "KEY", "USER_ID", "HEALTH_JOB_ID", "TABLE_NAME"])
 
     bucket = args["BUCKET"]
     key = args["KEY"]
     user_id = args["USER_ID"]
-    job_id = args["JOB_ID"]
+    job_id = args["HEALTH_JOB_ID"]
     table_name = args["TABLE_NAME"]
 
     logger.info("Starting XML parse: bucket=%s, key=%s, user=%s", bucket, key, user_id)
 
+    sc = SparkContext.getOrCreate()
+    GlueContext(sc)
+
     s3_client = boto3.client("s3")
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(table_name)
+    dynamodb_client = boto3.client("dynamodb")
 
     obj = s3_client.get_object(Bucket=bucket, Key=key)
     body = obj["Body"].read()
@@ -121,14 +127,13 @@ def main() -> None:
     logger.info("Parsing XML file: %s", xml_filename)
 
     with zf.open(xml_filename) as xml_file:
-        records_written = _stream_parse_and_write(xml_file, user_id, table)
+        records_written = _stream_parse_and_write(xml_file, user_id, table_name, dynamodb_client)
 
     zf.close()
     logger.info("Completed: %d health records written for user %s", records_written, user_id)
 
 
 def _find_xml_file(zf: zipfile.ZipFile) -> str | None:
-    """Find the main health export XML file in the ZIP."""
     for name in zf.namelist():
         lower = name.lower()
         if lower.endswith("exportar.xml") or lower.endswith("export.xml"):
@@ -136,16 +141,24 @@ def _find_xml_file(zf: zipfile.ZipFile) -> str | None:
     return None
 
 
-def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table: "boto3.resources.factory.dynamodb.Table") -> int:
-    """Stream-parse the XML with lxml and write records to DynamoDB with parallel batch writers."""
-    total_written = 0
+def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table_name: str, dynamodb_client) -> int:
+    total_submitted = 0
     records_skipped = 0
-    chunk: list[dict] = []
-    pk = f"USER#{user_id}"
+    shard_idx = 0
+    batch: list[dict] = []
 
     context = etree.iterparse(xml_file, events=("end",), tag="Record")
     executor = ThreadPoolExecutor(max_workers=WRITE_WORKERS)
-    futures = []
+    inflight: set[Future] = set()
+    failed = 0
+
+    def _drain_completed(target_size: int) -> None:
+        nonlocal failed
+        while len(inflight) >= target_size:
+            done, _ = _wait_any(inflight)
+            for f in done:
+                inflight.discard(f)
+                failed += f.result()
 
     for _, elem in context:
         record_type = elem.get("type", "")
@@ -160,47 +173,77 @@ def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, table: "b
 
         start_date = elem.get("startDate", "")
         sk = f"RECORD#{short_type}#{start_date}"
+        pk = f"USER#{user_id}#SHARD#{shard_idx}"
+        shard_idx = (shard_idx + 1) % NUM_SHARDS
 
-        chunk.append({
-            "PK": pk,
-            "SK": sk,
-            "GSI1SK": f"{short_type}#{start_date}",
-            "recordType": short_type,
-            "value": elem.get("value", ""),
-            "unit": elem.get("unit", ""),
-            "startDate": start_date,
-            "creationDate": elem.get("creationDate", ""),
+        batch.append({
+            "PutRequest": {
+                "Item": {
+                    "PK": {"S": pk},
+                    "SK": {"S": sk},
+                    "GSI1SK": {"S": f"{short_type}#{start_date}"},
+                    "recordType": {"S": short_type},
+                    "value": {"S": elem.get("value", "")},
+                    "unit": {"S": elem.get("unit", "")},
+                    "startDate": {"S": start_date},
+                    "creationDate": {"S": elem.get("creationDate", "")},
+                }
+            }
         })
         elem.clear()
         while elem.getprevious() is not None:
             del elem.getparent()[0]
 
-        if len(chunk) >= WRITE_CHUNK_SIZE:
-            futures.append(executor.submit(_write_chunk, table, chunk))
-            total_written += len(chunk)
-            chunk = []
+        if len(batch) >= BATCH_WRITE_SIZE:
+            _drain_completed(MAX_INFLIGHT)
+            deduped = _dedupe_batch(batch)
+            inflight.add(executor.submit(_write_batch, dynamodb_client, table_name, deduped))
+            total_submitted += len(deduped)
+            batch = []
 
-            if total_written % 50000 == 0:
-                logger.info("Progress: %d records written", total_written)
+            if total_submitted % 100000 == 0:
+                logger.info("Progress: %d records submitted", total_submitted)
 
-    if chunk:
-        futures.append(executor.submit(_write_chunk, table, chunk))
-        total_written += len(chunk)
+    if batch:
+        deduped = _dedupe_batch(batch)
+        inflight.add(executor.submit(_write_batch, dynamodb_client, table_name, deduped))
+        total_submitted += len(deduped)
 
-    for future in as_completed(futures):
-        future.result()
+    _drain_completed(1)
 
     executor.shutdown(wait=True)
 
-    logger.info("Skipped %d non-tracked records", records_skipped)
-    return total_written
+    logger.info("Skipped %d non-tracked records, %d unprocessed items", records_skipped, failed)
+    return total_submitted
 
 
-def _write_chunk(table: "boto3.resources.factory.dynamodb.Table", items: list[dict]) -> None:
-    """Write a chunk of items to DynamoDB using batch_writer."""
-    with table.batch_writer(overwrite_by_pkeys=["PK", "SK"]) as writer:
-        for item in items:
-            writer.put_item(Item=item)
+def _dedupe_batch(batch: list[dict]) -> list[dict]:
+    seen: dict[str, dict] = {}
+    for item in batch:
+        attrs = item["PutRequest"]["Item"]
+        key = f"{attrs['PK']['S']}#{attrs['SK']['S']}"
+        seen[key] = item
+    return list(seen.values())
+
+
+def _wait_any(futures: set[Future]) -> tuple[set[Future], set[Future]]:
+    from concurrent.futures import wait, FIRST_COMPLETED
+    return wait(futures, return_when=FIRST_COMPLETED)
+
+
+def _write_batch(client, table_name: str, items: list[dict]) -> int:
+    request = {table_name: items}
+    max_retries = 8
+
+    for attempt in range(max_retries):
+        response = client.batch_write_item(RequestItems=request)
+        unprocessed = response.get("UnprocessedItems", {})
+        if not unprocessed:
+            return 0
+        request = unprocessed
+        time.sleep(min(0.1 * (2 ** attempt), 5.0))
+
+    return sum(len(v) for v in request.values()) if request else 0
 
 
 if __name__ == "__main__":

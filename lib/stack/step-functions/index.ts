@@ -61,7 +61,7 @@ export class StepFunctionsFactory extends Construct {
           '--BUCKET': sfn.JsonPath.stringAt('$.bucket'),
           '--KEY': sfn.JsonPath.stringAt('$.key'),
           '--USER_ID': sfn.JsonPath.stringAt('$.userId'),
-          '--JOB_ID': sfn.JsonPath.stringAt('$.jobId'),
+          '--HEALTH_JOB_ID': sfn.JsonPath.stringAt('$.jobId'),
         }),
         resultPath: '$.glueResult',
       });

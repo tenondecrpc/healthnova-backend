@@ -24,11 +24,10 @@ export class GlueFactory extends Construct {
     const parseHealthXml = new GlueConstruct(this, 'ParseHealthXml', {
       jobName: this.parseHealthXmlJobName,
       scriptPath: 'src/glue/parse_health_xml.py',
-      jobType: 'pythonshell',
-      pythonVersion: '3.9',
-      glueVersion: '3.0',
-      maxCapacity: 1,
-      timeout: 240,
+      jobType: 'glueetl',
+      workerType: 'G.1X',
+      numberOfWorkers: 2,
+      timeout: 30,
       maxRetries: 1,
       defaultArguments: {
         '--TABLE_NAME': dynamoFactory.healthRecordsTable.tableName,
