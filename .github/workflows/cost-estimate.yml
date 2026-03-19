@@ -1,0 +1,78 @@
+name: Cost Estimate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'bin/**'
+      - 'package.json'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  cost-estimate:
+    name: Infracost CDK Diff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_CDK_DIFF_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: CDK Synth (current branch)
+        run: npx cdk synth --output cdk.out.current
+        env:
+          ENV_NAME: ${{ secrets.ENV_NAME }}
+          PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
+          AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
+          GITHUB_ORG: ${{ secrets.GITHUB_ORG }}
+          GITHUB_REPO: ${{ github.event.repository.name }}
+          MONTHLY_BUDGET_USD: ${{ secrets.MONTHLY_BUDGET_USD }}
+          BUDGET_ALERT_EMAILS: ${{ secrets.BUDGET_ALERT_EMAILS }}
+
+      - name: CDK Synth (base branch)
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git stash
+          git checkout origin/${{ github.base_ref }}
+          npm ci
+          npx cdk synth --output cdk.out.base
+          git checkout -
+          git stash pop || true
+        env:
+          ENV_NAME: ${{ secrets.ENV_NAME }}
+          PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
+          AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
+          GITHUB_ORG: ${{ secrets.GITHUB_ORG }}
+          GITHUB_REPO: ${{ github.event.repository.name }}
+          MONTHLY_BUDGET_USD: ${{ secrets.MONTHLY_BUDGET_USD }}
+          BUDGET_ALERT_EMAILS: ${{ secrets.BUDGET_ALERT_EMAILS }}
+
+      - uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Infracost diff
+        run: |
+          infracost diff \
+            --path cdk.out.current \
+            --compare-to cdk.out.base \
+            --format json \
+            --out-file infracost.json
+
+      - uses: infracost/actions/comment@v3
+        with:
+          path: infracost.json
+          behavior: update

@@ -10,4 +10,11 @@ const { env, params } = config;
 const { envName, projectName } = params;
 const mainStackName = `${capitalizeFirstLetter(projectName)}${capitalizeFirstLetter(envName)}Stack`;
 
-new MainStack(app, mainStackName, { env, params });
+new MainStack(app, mainStackName, {
+  env,
+  params,
+  githubOrg: process.env.GITHUB_ORG ?? '',
+  githubRepo: process.env.GITHUB_REPO ?? '',
+  monthlyBudgetUsd: Number(process.env.MONTHLY_BUDGET_USD ?? '100'),
+  budgetAlertEmails: (process.env.BUDGET_ALERT_EMAILS ?? '').split(',').filter(Boolean),
+});

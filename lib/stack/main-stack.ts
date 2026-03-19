@@ -10,17 +10,23 @@ import { S3Factory } from './s3';
 import { SetupFactory } from './setup';
 import { StepFunctionsFactory } from './step-functions';
 import { GlueFactory } from './glue';
+import { GithubOidcFactory } from './github-oidc';
+import { BudgetFactory } from './budget';
 
 interface MainStackProps extends cdk.StackProps {
   env: EnvironmentConfig;
   params: ParamsConfig;
+  githubOrg: string;
+  githubRepo: string;
+  monthlyBudgetUsd: number;
+  budgetAlertEmails: string[];
 }
 
 export class MainStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: MainStackProps) {
     super(scope, id, props);
 
-    const { params } = props;
+    const { params, githubOrg, githubRepo, monthlyBudgetUsd, budgetAlertEmails } = props;
     const { envName, projectName } = params;
 
     const s3Factory = new S3Factory(this, 'S3Factory', {
@@ -61,6 +67,18 @@ export class MainStack extends cdk.Stack {
     const setupFactory = new SetupFactory(this, 'SetupFactory', {
       lambdaFactory,
       cognitoFactory,
+    });
+
+    new GithubOidcFactory(this, 'GithubOidcFactory', {
+      params,
+      githubOrg,
+      githubRepo,
+    });
+
+    new BudgetFactory(this, 'BudgetFactory', {
+      params,
+      monthlyLimitUsd: monthlyBudgetUsd,
+      alertEmails: budgetAlertEmails,
     });
 
     cdk.Tags.of(this).add('Project', projectName);

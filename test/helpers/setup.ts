@@ -22,6 +22,10 @@ export function getTemplate(): Template {
     const stack = new MainStack(app, 'TestStack', {
       env: TEST_ENV,
       params: TEST_PARAMS,
+      githubOrg: 'test-org',
+      githubRepo: 'test-repo',
+      monthlyBudgetUsd: 100,
+      budgetAlertEmails: ['test@example.com'],
     });
     _template = Template.fromStack(stack);
   }
