@@ -72,7 +72,9 @@ jobs:
             --format json \
             --out-file infracost.json
 
-      - uses: infracost/actions/comment@v3
-        with:
-          path: infracost.json
-          behavior: update
+          infracost comment github \
+            --path infracost.json \
+            --repo ${{ github.repository }} \
+            --pull-request ${{ github.event.pull_request.number }} \
+            --github-token ${{ secrets.GITHUB_TOKEN }} \
+            --behavior update
