@@ -14,40 +14,7 @@ Once uploaded, the backend runs a parallel ingestion pipeline and stores normali
 
 ## Architecture
 
-```
-User (iOS app / web frontend)
-        │
-        ▼
-  Cognito User Pool  ──────── JWT auth
-        │
-        ▼
-  API Gateway REST API
-  (Lambda Authorizer)
-        │
-        ├── POST /upload/presigned-url  ──► presigned-url-export Lambda
-        │                                         │
-        │                                         ▼
-        │                                   S3 ExportsBucket
-        │                                  (exports/{userId}/{ts}.zip)
-        │                                         │
-        │                               EventBridge rule (object created)
-        │                                         │
-        │                                         ▼
-        │                              Step Functions State Machine
-        │                              ┌──────────────────────────┐
-        │                              │ 1. ParseInput             │
-        │                              │ 2. ValidateFile           │
-        │                              │ 3. ExtractManifest        │
-        │                              │ 4. ParallelParsing        │
-        │                              │    ├─ Glue (XML records)  │
-        │                              │    ├─ Lambda (ECG)        │
-        │                              │    └─ Lambda (GPX)        │
-        │                              │ 5. MarkComplete           │
-        │                              └──────────────────────────┘
-        │                                         │
-        │                                         ▼
-        └── GET /dashboard  ──────────────► DynamoDB health-records
-```
+![HealthNova AWS Architecture](architecture.png)
 
 ### AWS Services used
 
@@ -65,7 +32,7 @@ User (iOS app / web frontend)
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) 18+
+- [Node.js](https://nodejs.org/) 22+
 - [AWS CLI](https://aws.amazon.com/cli/) configured with credentials
 - [AWS CDK v2](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html) installed globally
 - Python 3.12 (for Lambda functions, optional for local development)
