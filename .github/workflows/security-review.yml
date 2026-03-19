@@ -95,3 +95,10 @@ jobs:
           \`\`\`"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
+          PROJECT_NAME: ${{ vars.PROJECT_NAME }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          GH_ORG: ${{ vars.GH_ORG }}
+          GH_REPO: ${{ github.event.repository.name }}
+          MONTHLY_BUDGET_USD: ${{ vars.MONTHLY_BUDGET_USD }}
+          BUDGET_ALERT_EMAILS: ${{ secrets.BUDGET_ALERT_EMAILS }}
