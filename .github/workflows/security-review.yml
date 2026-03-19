@@ -89,12 +89,13 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
           gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
             --body "## CDK Infrastructure Changes
           \`\`\`
           $DIFF_OUTPUT
           \`\`\`"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ENV_NAME: ${{ vars.ENV_NAME }}
           PROJECT_NAME: ${{ vars.PROJECT_NAME }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
