@@ -70,9 +70,14 @@ jobs:
 
       - name: Infracost diff
         run: |
+          infracost breakdown \
+            --path cdk.out.base \
+            --format json \
+            --out-file infracost-base.json
+
           infracost diff \
             --path cdk.out.current \
-            --compare-to cdk.out.base \
+            --compare-to infracost-base.json \
             --format json \
             --out-file infracost.json
 
