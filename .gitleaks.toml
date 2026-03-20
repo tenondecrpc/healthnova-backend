@@ -2,20 +2,32 @@
 useDefault = true
 
 [[rules]]
+id = "aws-session-token"
+description = "AWS Session Token (temporary credentials from ASIA-prefixed sessions)"
+regex = '''(?i)(aws_session_token|session_token|SessionToken)\s*[=:]\s*['"]?([A-Za-z0-9/+=]{100,})['"]?'''
+secretGroup = 2
+tags = ["aws", "credentials"]
+
+[[rules]]
 id = "generic-password-assignment"
 description = "Generic password variable assignment"
 regex = '''(?i)(password|passwd|pwd|secret|credential)\s*=\s*['"][^'"]{4,}['"]'''
 tags = ["secret", "password"]
+[rules.allowlist]
+  stopwords = ["example", "placeholder", "changeme", "your-", "dummy", "sample", "xxx", "todo"]
 
 [[rules]]
 id = "generic-api-key-assignment"
 description = "Generic API key variable assignment"
 regex = '''(?i)(api_key|apikey|api_secret|access_key|auth_token|auth_secret)\s*=\s*['"][^'"]{8,}['"]'''
 tags = ["secret", "api-key"]
+[rules.allowlist]
+  stopwords = ["example", "placeholder", "changeme", "your-", "dummy", "sample", "xxx", "todo"]
 
 [allowlist]
 description = "Global allowlist"
 paths = [
-  '''.env\.example$''',
-  '''test/.*''',
+  '''\.env\.example$''',
+  '''cdk\.out/''',
+  '''package-lock\.json$''',
 ]

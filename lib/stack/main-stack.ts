@@ -12,6 +12,10 @@ import { StepFunctionsFactory } from './step-functions';
 import { GlueFactory } from './glue';
 import { GithubOidcFactory } from './github-oidc';
 import { BudgetFactory } from './budget';
+import { GuardDutyFactory } from './guardduty';
+import { CloudTrailFactory } from './cloudtrail';
+import { AccessAnalyzerFactory } from './access-analyzer';
+import { WafFactory } from './waf';
 
 interface MainStackProps extends cdk.StackProps {
   env: EnvironmentConfig;
@@ -80,6 +84,11 @@ export class MainStack extends cdk.Stack {
       monthlyLimitUsd: monthlyBudgetUsd,
       alertEmails: budgetAlertEmails,
     });
+
+    new GuardDutyFactory(this, 'GuardDutyFactory', { params });
+    new CloudTrailFactory(this, 'CloudTrailFactory', { params });
+    new AccessAnalyzerFactory(this, 'AccessAnalyzerFactory', { params });
+    new WafFactory(this, 'WafFactory', { params, restApiFactory });
 
     cdk.Tags.of(this).add('Project', projectName);
     cdk.Tags.of(this).add('Environment', envName);
