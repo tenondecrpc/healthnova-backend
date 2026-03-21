@@ -30,15 +30,6 @@ describe('IAM Scoped Policies — no wildcards', () => {
     expect(wildcardDdb).toHaveLength(0);
   });
 
-  test('presigned-url-upload Lambda has scoped s3:PutObject on photos bucket', () => {
-    const resources = getResources();
-    const keys = getPoliciesForLambda('presigned-url-upload');
-    expect(keys.length).toBeGreaterThan(0);
-    const doc = JSON.stringify(resources[keys[0]]);
-    expect(doc).toContain('s3:PutObject');
-    expect(doc).not.toContain('"s3:*"');
-  });
-
   test('post-confirmation-signup Lambda has scoped dynamodb:PutItem on user table', () => {
     const resources = getResources();
     const keys = getPoliciesForLambda('post-confirmation-signup');

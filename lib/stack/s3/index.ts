@@ -9,7 +9,6 @@ interface S3FactoryProps {
 }
 
 export class S3Factory extends Construct {
-  public readonly photosBucket: S3Construct;
   public readonly exportsBucket: S3Construct;
 
   constructor(scope: Construct, id: string, props: S3FactoryProps) {
@@ -17,21 +16,6 @@ export class S3Factory extends Construct {
 
     const { params } = props;
     const { projectName, envName } = params;
-
-    this.photosBucket = new S3Construct(this, 'PhotosBucket', {
-        params,
-        bucketConfig: {
-            bucketName: `${projectName}-${envName}-photos`,
-            blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-            cors: [{
-                allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.POST],
-                allowedOrigins: ['*'],
-                allowedHeaders: ['*'],
-                exposedHeaders: ['ETag', 'Location'],
-                maxAge: 3000
-            }]
-        }
-    });
 
     this.exportsBucket = new S3Construct(this, 'ExportsBucket', {
         params,

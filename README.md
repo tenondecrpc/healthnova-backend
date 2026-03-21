@@ -171,7 +171,6 @@ When a user uploads an `export.zip`, the Step Functions state machine runs five 
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/upload/presigned-url` | Get a presigned S3 PUT URL to upload an export |
-| `POST` | `/presigned-url-upload` | Get a presigned URL for photo uploads |
 | `POST` | `/photobook/process` | Trigger photo processing |
 
 All endpoints require a valid Cognito JWT in the `Authorization` header.
