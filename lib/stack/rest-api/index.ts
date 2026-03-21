@@ -101,15 +101,6 @@ export class RestApiFactory extends Construct {
         requestValidator: 'body',
         requireAuth: true, // (default - user must be authenticated)
       },
-      // TODO: Enable authentication for presigned URL upload endpoint in production
-      // Change requireAuth to true once proper user management is implemented
-      {
-        path: '/presigned-url-upload',
-        method: 'POST',
-        lambda: lambdaFactory.presignedUrlUploadLambda.function,
-        requestValidator: 'body',
-        requireAuth: true,
-      },
       {
         path: '/upload/presigned-url',
         method: 'POST',

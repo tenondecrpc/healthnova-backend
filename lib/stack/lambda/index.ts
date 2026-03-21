@@ -24,7 +24,6 @@ export class LambdaFactory extends Construct {
   public readonly postConfirmationSignupLambda: LambdaConstruct;
   public readonly preSignupLambda: LambdaConstruct;
   public readonly processLambda: LambdaConstruct;
-  public readonly presignedUrlUploadLambda: LambdaConstruct;
   public readonly presignedUrlExportLambda: LambdaConstruct;
   public readonly validateFileLambda: LambdaConstruct;
   public readonly extractManifestLambda: LambdaConstruct;
@@ -94,26 +93,6 @@ export class LambdaFactory extends Construct {
           dynamoFactory.processTable.tableArn,
           `${dynamoFactory.processTable.tableArn}/index/*`,
         ],
-      })],
-      logging: {
-        logRetention: RetentionDays.ONE_MONTH,
-        removalPolicy: logRemovalPolicy,
-      },
-    });
-
-    this.presignedUrlUploadLambda = new LambdaConstruct(this, 'PresignedUrlUploadLambda', {
-      functionName: `${projectName}-${envName}-presigned-url-upload`,
-      description: 'Generates a presigned URL for file upload',
-      code: Code.fromAsset('src/lambda/core/presigned-url-upload'),
-      handler: 'index.handler',
-      runtime: PYTHON_RUNTIME,
-      layers: [layerFactory.pythonCommonLayer.layer],
-      environment: {
-        PHOTOS_BUCKET_NAME: s3Factory.photosBucket.bucket.bucketName,
-      },
-      additionalPolicies: [new iam.PolicyStatement({
-        actions: ['s3:PutObject'],
-        resources: [s3Factory.photosBucket.arnForObjects('*')],
       })],
       logging: {
         logRetention: RetentionDays.ONE_MONTH,
