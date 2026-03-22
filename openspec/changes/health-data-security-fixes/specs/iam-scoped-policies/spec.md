@@ -3,10 +3,6 @@
 ### Requirement: Lambda IAM policies are scoped to specific resources
 Each Lambda function SHALL have IAM policies that grant only the minimum actions on the specific AWS resource ARNs it requires. No shared wildcard policy (`s3:*` on `*` or `dynamodb:*` on `*`) SHALL be used in any Lambda execution role.
 
-#### Scenario: presigned-url-upload Lambda has scoped S3 PutObject policy
-- **WHEN** the CDK stack is synthesized
-- **THEN** the `presigned-url-upload` Lambda execution role SHALL have `s3:PutObject` on the photos bucket ARN only — no wildcard actions or wildcard resource ARNs
-
 #### Scenario: post-confirmation-signup Lambda has scoped DynamoDB write policy
 - **WHEN** the CDK stack is synthesized
 - **THEN** the `post-confirmation-signup` Lambda execution role SHALL have only `dynamodb:PutItem` on the user table ARN — no wildcard actions or wildcard resource ARNs

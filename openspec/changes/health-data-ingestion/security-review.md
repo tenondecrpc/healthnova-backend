@@ -21,7 +21,7 @@ However, **two pre-existing wildcard IAM policies** (`S3Policy.ts`, `DynamoPolic
 - [ ] **C1 — Wildcard IAM policies on `s3Policy` and `dynamoPolicy`**
   - `lib/stack/shared/policy/S3Policy.ts`: `s3:*` on `*`
   - `lib/stack/shared/policy/DynamoPolicy.ts`: `dynamodb:*` on `*`
-  - These policies are attached to `presignedUrlUploadLambda`, `postConfirmationSignupLambda`, and `processLambda`. Any compromise of these Lambdas grants full S3/DynamoDB access to the entire AWS account, including the health-records table with PHI.
+  - These policies are attached to `postConfirmationSignupLambda` and `processLambda`. Any compromise of these Lambdas grants full S3/DynamoDB access to the entire AWS account, including the health-records table with PHI.
   - **Not introduced by this change**, but exist in the same stack and must be remediated before production.
   - Remediation: Scope each policy to the specific bucket ARN / table ARN the Lambda actually needs.
 
@@ -116,7 +116,6 @@ However, **two pre-existing wildcard IAM policies** (`S3Policy.ts`, `DynamoPolic
 | `mark-complete` | `dynamodb:PutItem`, `dynamodb:BatchWriteItem` on health-records table | Scoped ✓ | OK |
 | `parse-ecg` | S3 read + DDB write, both scoped | Scoped ✓ | OK |
 | `parse-gpx` | S3 read + DDB write, both scoped | Scoped ✓ | OK |
-| `presigned-url-upload` | `s3:*` on `*` (via shared `s3Policy`) | **Wildcard ✗** | CRITICAL |
 | `post-confirmation-signup` | `dynamodb:*` on `*` (via shared `dynamoPolicy`) | **Wildcard ✗** | CRITICAL |
 | `process` | `dynamodb:*` on `*` (via shared `dynamoPolicy`) | **Wildcard ✗** | CRITICAL |
 | Glue `parse-health-xml` | `s3:GetObject` on `exports/*`, DDB write on health-records | Scoped ✓ | OK |
