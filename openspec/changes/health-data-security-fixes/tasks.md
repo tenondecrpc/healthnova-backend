@@ -3,11 +3,10 @@
 - [x] 1.1 Delete `lib/stack/shared/policy/S3Policy.ts` — remove the wildcard `s3:*` on `*` shared construct
 - [x] 1.2 Delete `lib/stack/shared/policy/DynamoPolicy.ts` — remove the wildcard `dynamodb:*` on `*` shared construct
 - [x] 1.3 Update `lib/stack/shared/policy/index.ts` to remove exports for the deleted policy files
-- [x] 1.4 In `lib/stack/lambda/index.ts`, replace `s3Policy` on `presignedUrlUploadLambda` with a scoped `PolicyStatement`: `s3:PutObject` on `photosBucket.arnForObjects('*')`
-- [x] 1.5 In `lib/stack/lambda/index.ts`, replace `dynamoPolicy` on `postConfirmationSignupLambda` with a scoped `PolicyStatement`: `dynamodb:PutItem` on `userTable.tableArn`
+- [x] 1.4 In `lib/stack/lambda/index.ts`, replace `dynamoPolicy` on `postConfirmationSignupLambda` with a scoped `PolicyStatement`: `dynamodb:PutItem` on `userTable.tableArn`
 - [x] 1.6 In `lib/stack/lambda/index.ts`, replace `dynamoPolicy` on `processLambda` with a scoped `PolicyStatement`: `dynamodb:GetItem`, `dynamodb:PutItem`, `dynamodb:UpdateItem`, `dynamodb:Query` on `processTable.tableArn`
 - [x] 1.7 Run `npm run build && npx cdk synth` and verify no `"Action": "s3:*"` or `"Action": "dynamodb:*"` with `"Resource": "*"` appear in the synthesized template
-- [x] 1.8 Update `test/lambda/presigned-url-export.test.ts` and add tests for the new scoped policies on `presigned-url-upload`, `post-confirmation-signup`, and `process` Lambdas
+- [x] 1.8 Update `test/lambda/presigned-url-export.test.ts` and add tests for the new scoped policies on `post-confirmation-signup` and `process` Lambdas
 
 ## 2. Step Functions userId Extraction (HIGH — H1)
 

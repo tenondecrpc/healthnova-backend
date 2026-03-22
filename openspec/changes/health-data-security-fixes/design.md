@@ -2,7 +2,7 @@
 
 The `health-data-ingestion` change shipped with five security defects surfaced during the post-implementation review:
 
-1. **Wildcard IAM policies** — `S3Policy.ts` (`s3:*` on `*`) and `DynamoPolicy.ts` (`dynamodb:*` on `*`) are shared constructs attached to `presigned-url-upload`, `post-confirmation-signup`, and `process` Lambdas. This violates the least-privilege principle and grants full account-level S3/DynamoDB access to any compromised Lambda.
+1. **Wildcard IAM policies** — `S3Policy.ts` (`s3:*` on `*`) and `DynamoPolicy.ts` (`dynamodb:*` on `*`) are shared constructs attached to `post-confirmation-signup` and `process` Lambdas. This violates the least-privilege principle and grants full account-level S3/DynamoDB access to any compromised Lambda.
 
 2. **`userId` is the raw S3 key** — The EventBridge rule target maps both `userId` and `jobId` via `$.detail.object.key`, which resolves to `exports/abc123/1700000000.zip` instead of `abc123`. Every DynamoDB health record ends up with a malformed PK (`USER#exports/...`), making the data unqueryable.
 
@@ -96,4 +96,3 @@ Remove `publicReadAccess`, set `blockPublicAccess: s3.BlockPublicAccess.BLOCK_AL
 ## Open Questions
 
 - What is the correct frontend origin for CORS `allowedOrigins`? (Needed to close M3 finding — currently deferred, `*` remains acceptable for non-production environments.)
-- Should the `presigned-url-upload` Lambda (photos) also migrate to a scoped `s3:PutObject` policy once `publicReadAccess` is removed and presigned PUTs are introduced?

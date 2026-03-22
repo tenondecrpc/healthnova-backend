@@ -96,7 +96,6 @@ The following was confirmed by parsing `cdk.out/HealthnovaDevStack.template.json
 | Lambda / Role | Actions | Resource | Status |
 |--------------|---------|----------|--------|
 | `presigned-url-export` | `s3:PutObject` | `exports/*` on exports bucket | ✓ Scoped |
-| `presigned-url-upload` | `s3:PutObject` | `*` on photos bucket | ✓ Scoped |
 | `post-confirmation-signup` | `dynamodb:PutItem` | user table ARN | ✓ Scoped |
 | `process` | `dynamodb:GetItem/PutItem/UpdateItem/Query` | process table ARN + indexes | ✓ Scoped |
 | `validate-file` | `s3:GetObject`, `s3:HeadObject` | `exports/*` | ✓ Scoped |
