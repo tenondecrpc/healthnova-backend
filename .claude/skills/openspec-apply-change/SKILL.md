@@ -148,6 +148,8 @@ What would you like to do?
 - Update task checkbox immediately after completing each task
 - Pause on errors, blockers, or unclear requirements - don't guess
 - Use contextFiles from CLI output, don't assume specific file names
+- **Context Sandwich:** Use the pattern [SHORT INSTRUCTION] [MINIMUM CONTEXT] [REPEAT INSTRUCTION/CONSTRAINTS] for any complex internal task to maintain focus.
+- **Diffs over Full Files:** To review small modifications or recent changes, execute `git diff HEAD~1` or `git diff <file>` instead of reading the entire file.
 
 **Fluid Workflow Integration**
 

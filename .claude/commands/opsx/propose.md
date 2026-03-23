@@ -65,6 +65,12 @@ When ready to implement, run /opsx:apply
       - Create the artifact file using `template` as the structure
       - Apply `context` and `rules` as constraints - but do NOT copy them into the file
       - Show brief progress: "Created <artifact-id>"
+      
+      **CRITICAL: Sequential Phases in Planning (`tasks.md`)**
+      - When generating the implementation plan (`tasks.md`), you MUST break the work into **Strict Sequential Phases**.
+      - Each phase must have clear scope and deliverables.
+      - Dependencies between phases must be explicit.
+      - **AWS Infrastructure Dependencies**: Respect the necessary order of creation for AWS resources (e.g., IAM Roles must be created before the Lambdas that assume them; S3 Buckets before the triggers that rely on them).
 
    b. **Continue until all `applyRequires` artifacts are complete**
       - After creating each artifact, re-run `openspec status --change "<name>" --json`
