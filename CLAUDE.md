@@ -96,47 +96,20 @@ All OpenSpec artifacts live in `/openspec/changes/[change-name]/`
 
 ## Development Guidelines
 
-### TypeScript (CDK)
-- Use camelCase naming
-- Enable strict mode
-- Explicit types for all constructs
-- Organize by AWS service in /stack
-- **Construct-first pattern**: Every AWS service must have a reusable L2 construct in `/lib/construct/` before being used in a factory (`/lib/stack/<service>/`). The factory composes constructs with project-specific config — it should never create raw Cfn resources directly. Pattern: `Construct → Factory → Stack`. THIS IS AN IMMUTABLE RULE.
-- **No L1 Constructs (Cfn*)**: Never use raw CloudFormation constructs (`CfnBucket`, `CfnFunction`) if an L2 construct exists (`Bucket`, `Function`). 
-- **Dependency Management**: Remember that changes to constructs might require updating references in multiple stacks.
+Domain-specific rules are in `.claude/rules/` and load automatically by file path:
 
-### Python (Lambda Functions)
-- Use snake_case naming
-- Add type hints and docstrings
-- Keep functions under 15MB (use layers for dependencies)
-- No PII in logs
-- **Layer Usage**: For Python Lambda functions, always package heavy dependencies (like `pandas`, `numpy`, or large SDKs) in Lambda Layers, not directly in the function deployment package, to avoid hitting the 15MB deployment limit and to speed up deployments.
-- **Streaming over Memory**: When handling Apple Health XML files or other large payloads, always use streaming parsers (like `xml.etree.ElementTree.iterparse`). Do NOT read the entire file into memory using `.read()`.
-- **Environment Variables**: Always retrieve configuration via environment variables, and ensure the CDK stack provisions them correctly.
-
-### Security
-- Encrypt all data at rest and in transit
-- Use least privilege IAM policies. Never use `*` in Actions unless absolutely necessary and scoped to specific resources.
-- Time-limited presigned URLs (1 hour max)
-- No hardcoded credentials
-- HIPAA-aware logging (no PHI)
+| Rule File | Activates On | Covers |
+|-----------|-------------|--------|
+| `cdk-typescript.md` | `lib/**/*.ts` | camelCase, Construct-first pattern, no L1 |
+| `python-lambda.md` | `src/lambda/**/*.py`, `src/layer/**/*.py` | snake_case, layers, streaming, env vars |
+| `security.md` | `lib/**/*.ts`, `src/**/*.py` | HIPAA, IAM least privilege, encryption |
+| `testing.md` | `test/**/*.ts` | Shared setup, domain organization, scope |
 
 ### Performance
 - XML streaming parser for 500MB+ files
 - DynamoDB batch writes
 - S3 lifecycle policies (archive after 90 days)
 - Lambda memory tuning based on file size
-
-## Testing Standards
-
-- **Shared Setup**: ALWAYS use the setup helper to get the CDK template `import { getTemplate } from '../helpers/setup';` to avoid instantiating the stack multiple times.
-- **Files**: `test/[domain]/[resource].test.ts`
-- **Important Rules**: 
-  1. Organize by AWS domain (S3, Lambda, DynamoDB, Step Functions).
-  2. One file per main resource. Do not mix tests for different resources.
-  3. Descriptive tests explaining what specific behavior is being verified.
-- **What to test**: Resource configuration (properties, environment variables), and IAM Policies.
-- **Do NOT include**: Lambda business logic tests (these go in Python unit tests), E2E tests, or tests that require actual AWS deployment.
 
 ## Environment Variables
 
