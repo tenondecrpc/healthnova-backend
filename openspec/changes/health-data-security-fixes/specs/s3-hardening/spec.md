@@ -15,8 +15,8 @@ The photos S3 bucket SHALL have `BlockPublicAccess.BLOCK_ALL` enabled and SHALL 
 - **WHEN** an unauthenticated HTTP GET is made directly to any photos bucket object URL
 - **THEN** S3 returns HTTP 403
 
-### Requirement: Exports bucket CORS is restricted to PUT method only
-The health exports bucket already restricts CORS to `PUT` method. This requirement ensures the constraint is maintained and documents it explicitly.
+### Requirement: Exports bucket CORS SHALL be restricted to PUT method only
+The health exports bucket SHALL restrict CORS to `PUT` method. This requirement ensures the constraint is maintained and documents it explicitly.
 
 #### Scenario: Exports bucket CORS only allows PUT
 - **WHEN** the CDK stack is synthesized
