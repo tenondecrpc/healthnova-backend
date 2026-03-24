@@ -1,0 +1,371 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Dashboard Lambdas Infrastructure Snapshot: dashboard REST API routes generated correctly 1`] = `
+[
+  {
+    "Properties": {
+      "ParentId": {
+        "Fn::GetAtt": [
+          "RestApiFactoryRestApi3E0622A6",
+          "RootResourceId",
+        ],
+      },
+      "PathPart": "dashboard",
+      "RestApiId": {
+        "Ref": "RestApiFactoryRestApi3E0622A6",
+      },
+    },
+    "Type": "AWS::ApiGateway::Resource",
+  },
+  {
+    "Properties": {
+      "ParentId": {
+        "Ref": "RestApiFactoryRestApidashboard76A7C863",
+      },
+      "PathPart": "metrics",
+      "RestApiId": {
+        "Ref": "RestApiFactoryRestApi3E0622A6",
+      },
+    },
+    "Type": "AWS::ApiGateway::Resource",
+  },
+  {
+    "Properties": {
+      "ParentId": {
+        "Ref": "RestApiFactoryRestApidashboard76A7C863",
+      },
+      "PathPart": "ecg",
+      "RestApiId": {
+        "Ref": "RestApiFactoryRestApi3E0622A6",
+      },
+    },
+    "Type": "AWS::ApiGateway::Resource",
+  },
+  {
+    "Properties": {
+      "ParentId": {
+        "Ref": "RestApiFactoryRestApidashboard76A7C863",
+      },
+      "PathPart": "workouts",
+      "RestApiId": {
+        "Ref": "RestApiFactoryRestApi3E0622A6",
+      },
+    },
+    "Type": "AWS::ApiGateway::Resource",
+  },
+  {
+    "Properties": {
+      "ParentId": {
+        "Ref": "RestApiFactoryRestApidashboard76A7C863",
+      },
+      "PathPart": "jobs",
+      "RestApiId": {
+        "Ref": "RestApiFactoryRestApi3E0622A6",
+      },
+    },
+    "Type": "AWS::ApiGateway::Resource",
+  },
+  {
+    "Properties": {
+      "ParentId": {
+        "Ref": "RestApiFactoryRestApidashboard76A7C863",
+      },
+      "PathPart": "summary",
+      "RestApiId": {
+        "Ref": "RestApiFactoryRestApi3E0622A6",
+      },
+    },
+    "Type": "AWS::ApiGateway::Resource",
+  },
+]
+`;
+
+exports[`Dashboard Lambdas Infrastructure Snapshot: getDashboardEcgLambda generated correctly 1`] = `
+{
+  "DependsOn": [
+    "LambdaFactoryGetDashboardEcgLambdaExecutionRoleBFB57AF7",
+  ],
+  "Properties": {
+    "Architectures": [
+      "x86_64",
+    ],
+    "Code": {
+      "S3Bucket": "cdk-hnb659fds-assets-494966206764-us-east-1",
+      "S3Key": "c51768367c896cf5ce478dc632f0c11df7284b3370bde1f97d905f53827dd375.zip",
+    },
+    "Description": "Queries ECG records with cursor-based pagination",
+    "Environment": {
+      "Variables": {
+        "HEALTH_RECORDS_TABLE_NAME": {
+          "Ref": "DynamoFactoryHealthRecordsTablehealthnovadevhealthrecords61E0F850",
+        },
+      },
+    },
+    "FunctionName": "healthnova-dev-get-dashboard-ecg",
+    "Handler": "index.handler",
+    "Layers": [
+      {
+        "Ref": "LayerFactoryhealthnovadevpythoncommonLayerA12B1EF2",
+      },
+    ],
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": {
+        "Ref": "LambdaFactoryGetDashboardEcgLambdaLogGroupE8A3EB1A",
+      },
+    },
+    "MemorySize": 256,
+    "Role": {
+      "Fn::GetAtt": [
+        "LambdaFactoryGetDashboardEcgLambdaExecutionRoleBFB57AF7",
+        "Arn",
+      ],
+    },
+    "Runtime": "python3.12",
+    "Tags": [
+      {
+        "Key": "Environment",
+        "Value": "dev",
+      },
+      {
+        "Key": "Project",
+        "Value": "healthnova",
+      },
+    ],
+    "Timeout": 30,
+  },
+  "Type": "AWS::Lambda::Function",
+}
+`;
+
+exports[`Dashboard Lambdas Infrastructure Snapshot: getDashboardJobsLambda generated correctly 1`] = `
+{
+  "DependsOn": [
+    "LambdaFactoryGetDashboardJobsLambdaExecutionRole18CE32AD",
+  ],
+  "Properties": {
+    "Architectures": [
+      "x86_64",
+    ],
+    "Code": {
+      "S3Bucket": "cdk-hnb659fds-assets-494966206764-us-east-1",
+      "S3Key": "67bec4dbbfae12c98c11dc24fe75c27487647e21e47ef4daf130d292b81708a8.zip",
+    },
+    "Description": "Lists ingestion job history sorted by most recent",
+    "Environment": {
+      "Variables": {
+        "HEALTH_RECORDS_TABLE_NAME": {
+          "Ref": "DynamoFactoryHealthRecordsTablehealthnovadevhealthrecords61E0F850",
+        },
+      },
+    },
+    "FunctionName": "healthnova-dev-get-dashboard-jobs",
+    "Handler": "index.handler",
+    "Layers": [
+      {
+        "Ref": "LayerFactoryhealthnovadevpythoncommonLayerA12B1EF2",
+      },
+    ],
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": {
+        "Ref": "LambdaFactoryGetDashboardJobsLambdaLogGroup943EAA4B",
+      },
+    },
+    "MemorySize": 256,
+    "Role": {
+      "Fn::GetAtt": [
+        "LambdaFactoryGetDashboardJobsLambdaExecutionRole18CE32AD",
+        "Arn",
+      ],
+    },
+    "Runtime": "python3.12",
+    "Tags": [
+      {
+        "Key": "Environment",
+        "Value": "dev",
+      },
+      {
+        "Key": "Project",
+        "Value": "healthnova",
+      },
+    ],
+    "Timeout": 30,
+  },
+  "Type": "AWS::Lambda::Function",
+}
+`;
+
+exports[`Dashboard Lambdas Infrastructure Snapshot: getDashboardMetricsLambda generated correctly 1`] = `
+{
+  "DependsOn": [
+    "LambdaFactoryGetDashboardMetricsLambdaExecutionRole4DC6DFC6",
+  ],
+  "Properties": {
+    "Architectures": [
+      "x86_64",
+    ],
+    "Code": {
+      "S3Bucket": "cdk-hnb659fds-assets-494966206764-us-east-1",
+      "S3Key": "d848b26c4d7a5590c1f7b959b0fce5567640bcf42dff9a1ca43dc2f004c7097d.zip",
+    },
+    "Description": "Queries health metrics with scatter-gather across 10 DynamoDB shards",
+    "Environment": {
+      "Variables": {
+        "HEALTH_RECORDS_TABLE_NAME": {
+          "Ref": "DynamoFactoryHealthRecordsTablehealthnovadevhealthrecords61E0F850",
+        },
+      },
+    },
+    "FunctionName": "healthnova-dev-get-dashboard-metrics",
+    "Handler": "index.handler",
+    "Layers": [
+      {
+        "Ref": "LayerFactoryhealthnovadevpythoncommonLayerA12B1EF2",
+      },
+    ],
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": {
+        "Ref": "LambdaFactoryGetDashboardMetricsLambdaLogGroup05990436",
+      },
+    },
+    "MemorySize": 256,
+    "Role": {
+      "Fn::GetAtt": [
+        "LambdaFactoryGetDashboardMetricsLambdaExecutionRole4DC6DFC6",
+        "Arn",
+      ],
+    },
+    "Runtime": "python3.12",
+    "Tags": [
+      {
+        "Key": "Environment",
+        "Value": "dev",
+      },
+      {
+        "Key": "Project",
+        "Value": "healthnova",
+      },
+    ],
+    "Timeout": 30,
+  },
+  "Type": "AWS::Lambda::Function",
+}
+`;
+
+exports[`Dashboard Lambdas Infrastructure Snapshot: getDashboardSummaryLambda generated correctly 1`] = `
+{
+  "DependsOn": [
+    "LambdaFactoryGetDashboardSummaryLambdaExecutionRoleF2BBDDFD",
+  ],
+  "Properties": {
+    "Architectures": [
+      "x86_64",
+    ],
+    "Code": {
+      "S3Bucket": "cdk-hnb659fds-assets-494966206764-us-east-1",
+      "S3Key": "e6d95bf147445ed8096ce91484c00d5a106deac116fd5660e51e798fc38084a7.zip",
+    },
+    "Description": "Computes composite health summary with parallel queries for last 7 days",
+    "Environment": {
+      "Variables": {
+        "HEALTH_RECORDS_TABLE_NAME": {
+          "Ref": "DynamoFactoryHealthRecordsTablehealthnovadevhealthrecords61E0F850",
+        },
+      },
+    },
+    "FunctionName": "healthnova-dev-get-dashboard-summary",
+    "Handler": "index.handler",
+    "Layers": [
+      {
+        "Ref": "LayerFactoryhealthnovadevpythoncommonLayerA12B1EF2",
+      },
+    ],
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": {
+        "Ref": "LambdaFactoryGetDashboardSummaryLambdaLogGroup7BF257A7",
+      },
+    },
+    "MemorySize": 256,
+    "Role": {
+      "Fn::GetAtt": [
+        "LambdaFactoryGetDashboardSummaryLambdaExecutionRoleF2BBDDFD",
+        "Arn",
+      ],
+    },
+    "Runtime": "python3.12",
+    "Tags": [
+      {
+        "Key": "Environment",
+        "Value": "dev",
+      },
+      {
+        "Key": "Project",
+        "Value": "healthnova",
+      },
+    ],
+    "Timeout": 30,
+  },
+  "Type": "AWS::Lambda::Function",
+}
+`;
+
+exports[`Dashboard Lambdas Infrastructure Snapshot: getDashboardWorkoutsLambda generated correctly 1`] = `
+{
+  "DependsOn": [
+    "LambdaFactoryGetDashboardWorkoutsLambdaExecutionRoleCDCBA33F",
+  ],
+  "Properties": {
+    "Architectures": [
+      "x86_64",
+    ],
+    "Code": {
+      "S3Bucket": "cdk-hnb659fds-assets-494966206764-us-east-1",
+      "S3Key": "d78f718ce7f644c16fa3be409a5f790bd8b8c00c508e97d1f7bc5511a47821f1.zip",
+    },
+    "Description": "Queries GPX workout records with cursor-based pagination",
+    "Environment": {
+      "Variables": {
+        "HEALTH_RECORDS_TABLE_NAME": {
+          "Ref": "DynamoFactoryHealthRecordsTablehealthnovadevhealthrecords61E0F850",
+        },
+      },
+    },
+    "FunctionName": "healthnova-dev-get-dashboard-workouts",
+    "Handler": "index.handler",
+    "Layers": [
+      {
+        "Ref": "LayerFactoryhealthnovadevpythoncommonLayerA12B1EF2",
+      },
+    ],
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": {
+        "Ref": "LambdaFactoryGetDashboardWorkoutsLambdaLogGroupF98D733F",
+      },
+    },
+    "MemorySize": 256,
+    "Role": {
+      "Fn::GetAtt": [
+        "LambdaFactoryGetDashboardWorkoutsLambdaExecutionRoleCDCBA33F",
+        "Arn",
+      ],
+    },
+    "Runtime": "python3.12",
+    "Tags": [
+      {
+        "Key": "Environment",
+        "Value": "dev",
+      },
+      {
+        "Key": "Project",
+        "Value": "healthnova",
+      },
+    ],
+    "Timeout": 30,
+  },
+  "Type": "AWS::Lambda::Function",
+}
+`;
