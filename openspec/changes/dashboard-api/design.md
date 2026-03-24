@@ -102,3 +102,12 @@ ECG and GPX records use `PK = USER#{userId}` (non-sharded), so a single DynamoDB
 1. Deploy CDK stack: 5 new Lambda functions, API Gateway routes, IAM read policies
 2. No data migration required — reads existing data written by ingestion pipeline
 3. Rollback: remove API Gateway routes; Lambda functions are stateless and can be deleted without side effects
+
+## Future Implementations
+
+### Scheduled LLM Disease Detection
+A process running daily (e.g., EventBridge cron + Lambda) will analyze a user's last 90 days of health records using un LLM to identify potential diseases, anomalies, or correlations. 
+
+**Architectural Approach:**
+- **No DynamoDB Refactor:** By restricting analysis to a sliding 90-day window, this process naturally aligns with the current DynamoDB `Scatter-gather` limits, avoiding the need to scan up to 3 years of historical records or modify the `healthRecordsTable` schema.
+- **No Vector DB Required:** Apple Watch metrics are highly structured time-series data. Instead of using embeddings or a Vector DB (which excel at semantic search), the data will be queried as raw JSON arrays and injected directly into the LLM's context window. Modern LLMs (with 128k+ token limits) can easily ingest 90 days of daily aggregates and raw events without issue.

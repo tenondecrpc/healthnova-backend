@@ -35,3 +35,7 @@ Health data is being ingested and stored in DynamoDB (heart rate, HRV, blood pre
 - **Security**: All endpoints require Cognito authentication; queries scoped to authenticated user's records only (`USER#{userId}`); no PHI in logs; date range capped at 90 days to prevent expensive full-table scans
 - **Cost estimate**: Lambda invocations (~$0.20/million); DynamoDB reads (~$0.25/million read units); summary endpoint uses up to 32 parallel queries per invocation (30 shard queries + ECG + GPX)
 - **No new tables or GSIs**: All queries use existing `healthRecordsTable` keys and the `UserTypeIndex` GSI
+
+## Future Implementations
+
+- **LLM Disease Detection**: A separate daily asynchronous process that will query the last 90 days of a user's health records and pass them to a Large Language Model (LLM) to detect potential anomalies or early signs of diseases. This will operate within the maximum 90-day query limit established in this API.
