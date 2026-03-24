@@ -47,7 +47,7 @@
 
 ## 6. Verification
 
-- [x] 6.1 Run full test suite (`npm test`) — all tests pass (8 suites, 28 tests)
+- [x] 6.1 Run full test suite (`npm test`) — all tests pass (7 suites, 25 tests)
 - [x] 6.2 Run `npx cdk synth` — no synthesis errors; zero wildcard IAM actions in template
-- [ ] 6.3 Run `npx cdk diff` — review the changeset confirms: no new `*` IAM resources, photos bucket policy updated, Glue job properties updated, state machine definition updated
-- [ ] 6.4 Re-run `/opsx:security health-data-security-fixes` — confirm CRITICAL and HIGH findings are resolved
+- [x] 6.3 Run `npx cdk diff` — review the changeset confirms: no new `*` IAM resources, photos bucket policy updated, Glue job properties updated, state machine definition updated
+- [x] 6.4 Re-run `/opsx:security health-data-security-fixes` — confirm CRITICAL and HIGH findings are resolved
