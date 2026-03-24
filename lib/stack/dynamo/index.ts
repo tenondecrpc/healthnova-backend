@@ -13,7 +13,7 @@ export interface DynamoFactoryProps {
  */
 export class DynamoFactory extends Construct {
   public readonly userTable: DynamoConstruct;
-  public readonly processTable: DynamoConstruct;
+
   public readonly healthRecordsTable: DynamoConstruct;
 
   constructor(scope: Construct, id: string, props: DynamoFactoryProps) {
@@ -28,22 +28,6 @@ export class DynamoFactory extends Construct {
         tableName: `${projectName}-${envName}-user`,
         partitionKey: {
           name: 'id',
-          type: dynamodb.AttributeType.STRING,
-        },
-        billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      },
-    });
-
-    this.processTable = new DynamoConstruct(this, 'ProcessTable', {
-      params,
-      tableConfig: {
-        tableName: `${projectName}-${envName}-process`,
-        partitionKey: {
-          name: 'id',
-          type: dynamodb.AttributeType.STRING,
-        },
-        sortKey: {
-          name: 'createdAt',
           type: dynamodb.AttributeType.STRING,
         },
         billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,

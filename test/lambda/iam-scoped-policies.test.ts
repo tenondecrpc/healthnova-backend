@@ -39,12 +39,5 @@ describe('IAM Scoped Policies — no wildcards', () => {
     expect(doc).not.toContain('"dynamodb:*"');
   });
 
-  test('process Lambda has scoped DynamoDB actions on process table', () => {
-    const resources = getResources();
-    const keys = getPoliciesForLambda('healthnova-dev-process');
-    expect(keys.length).toBeGreaterThan(0);
-    const doc = JSON.stringify(resources[keys[0]]);
-    expect(doc).toContain('dynamodb:PutItem');
-    expect(doc).not.toContain('"dynamodb:*"');
-  });
+
 });

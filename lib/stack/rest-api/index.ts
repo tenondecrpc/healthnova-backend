@@ -92,15 +92,8 @@ export class RestApiFactory extends Construct {
   private createRoutes(lambdaFactory: LambdaFactory): RestApiRouteConfig[] {
     return [
       // ===================
-      // EXAM ROUTES
+      // ETL ROUTES
       // ===================
-      {
-        path: '/photobook/process',
-        method: 'POST',
-        lambda: lambdaFactory.processLambda.function,
-        requestValidator: 'body',
-        requireAuth: true, // (default - user must be authenticated)
-      },
       {
         path: '/upload/presigned-url',
         method: 'POST',
@@ -108,20 +101,38 @@ export class RestApiFactory extends Construct {
         requireAuth: true,
       },
       // ===================
-      // FUTURE ROUTES (commented for reference)
+      // DASHBOARD ROUTES
       // ===================
-      // {
-      //   path: '/user/profile',
-      //   method: 'GET',
-      //   lambda: lambdaFactory.getUserProfileLambda.function,
-      //   // requireAuth: true (default)
-      // },
-      // {
-      //   path: '/user/profile',
-      //   method: 'PUT',
-      //   lambda: lambdaFactory.updateUserProfileLambda.function,
-      //   requestValidator: 'body',
-      // },
+      {
+        path: '/dashboard/metrics',
+        method: 'GET',
+        lambda: lambdaFactory.getDashboardMetricsLambda.function,
+        requireAuth: true,
+      },
+      {
+        path: '/dashboard/ecg',
+        method: 'GET',
+        lambda: lambdaFactory.getDashboardEcgLambda.function,
+        requireAuth: true,
+      },
+      {
+        path: '/dashboard/workouts',
+        method: 'GET',
+        lambda: lambdaFactory.getDashboardWorkoutsLambda.function,
+        requireAuth: true,
+      },
+      {
+        path: '/dashboard/jobs',
+        method: 'GET',
+        lambda: lambdaFactory.getDashboardJobsLambda.function,
+        requireAuth: true,
+      },
+      {
+        path: '/dashboard/summary',
+        method: 'GET',
+        lambda: lambdaFactory.getDashboardSummaryLambda.function,
+        requireAuth: true,
+      },
     ];
   }
 

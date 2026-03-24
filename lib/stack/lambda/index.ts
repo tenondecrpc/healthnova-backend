@@ -23,7 +23,7 @@ export interface LambdaFactoryProps {
 export class LambdaFactory extends Construct {
   public readonly postConfirmationSignupLambda: LambdaConstruct;
   public readonly preSignupLambda: LambdaConstruct;
-  public readonly processLambda: LambdaConstruct;
+
   public readonly presignedUrlExportLambda: LambdaConstruct;
   public readonly validateFileLambda: LambdaConstruct;
   public readonly extractManifestLambda: LambdaConstruct;
@@ -33,6 +33,13 @@ export class LambdaFactory extends Construct {
   public readonly parseGpxLambda: LambdaConstruct;
   public readonly notFoundLambda: LambdaConstruct;
   public readonly authorizerLambda: LambdaConstruct;
+
+  // Dashboard Lambdas
+  public readonly getDashboardMetricsLambda: LambdaConstruct;
+  public readonly getDashboardEcgLambda: LambdaConstruct;
+  public readonly getDashboardWorkoutsLambda: LambdaConstruct;
+  public readonly getDashboardJobsLambda: LambdaConstruct;
+  public readonly getDashboardSummaryLambda: LambdaConstruct;
 
   constructor(scope: Construct, id: string, props: LambdaFactoryProps) {
     super(scope, id);
@@ -69,31 +76,6 @@ export class LambdaFactory extends Construct {
       handler: 'index.handler',
       runtime: PYTHON_RUNTIME,
       layers: [layerFactory.pythonCommonLayer.layer],
-      logging: {
-        logRetention: RetentionDays.ONE_MONTH,
-        removalPolicy: logRemovalPolicy,
-      },
-    });
-
-    this.processLambda = new LambdaConstruct(this, 'ProcessLambda', {
-      functionName: `${projectName}-${envName}-process`,
-      description: 'Executes a main process',
-      code: Code.fromAsset('src/lambda/core/process'),
-      handler: 'index.handler',
-      runtime: PYTHON_RUNTIME,
-      layers: [layerFactory.pythonCommonLayer.layer],
-      timeout: Duration.seconds(30),
-      memorySize: 256,
-      environment: {
-        PROCESS_TABLE_NAME: dynamoFactory.processTable.table.tableName,
-      },
-      additionalPolicies: [new iam.PolicyStatement({
-        actions: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:Query'],
-        resources: [
-          dynamoFactory.processTable.tableArn,
-          `${dynamoFactory.processTable.tableArn}/index/*`,
-        ],
-      })],
       logging: {
         logRetention: RetentionDays.ONE_MONTH,
         removalPolicy: logRemovalPolicy,
@@ -276,6 +258,112 @@ export class LambdaFactory extends Construct {
         USER_POOL_ID: 'UNDEFINED_BY_DEFAULT',
         APP_CLIENT_ID: 'UNDEFINED_BY_DEFAULT',
       },
+      logging: {
+        logRetention: RetentionDays.ONE_MONTH,
+        removalPolicy: logRemovalPolicy,
+      },
+    });
+
+    // =====================
+    // DASHBOARD LAMBDAS
+    // =====================
+    const healthRecordsReadPolicy = new iam.PolicyStatement({
+      actions: ['dynamodb:Query'],
+      resources: [
+        dynamoFactory.healthRecordsTable.tableArn,
+        `${dynamoFactory.healthRecordsTable.tableArn}/index/UserTypeIndex`,
+      ],
+    });
+
+    this.getDashboardMetricsLambda = new LambdaConstruct(this, 'GetDashboardMetricsLambda', {
+      functionName: `${projectName}-${envName}-get-dashboard-metrics`,
+      description: 'Queries health metrics with scatter-gather across 10 DynamoDB shards',
+      code: Code.fromAsset('src/lambda/dashboard/get-metrics'),
+      handler: 'index.handler',
+      runtime: PYTHON_RUNTIME,
+      layers: [layerFactory.pythonCommonLayer.layer],
+      timeout: Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        HEALTH_RECORDS_TABLE_NAME: dynamoFactory.healthRecordsTable.table.tableName,
+      },
+      additionalPolicies: [healthRecordsReadPolicy],
+      logging: {
+        logRetention: RetentionDays.ONE_MONTH,
+        removalPolicy: logRemovalPolicy,
+      },
+    });
+
+    this.getDashboardEcgLambda = new LambdaConstruct(this, 'GetDashboardEcgLambda', {
+      functionName: `${projectName}-${envName}-get-dashboard-ecg`,
+      description: 'Queries ECG records with cursor-based pagination',
+      code: Code.fromAsset('src/lambda/dashboard/get-ecg'),
+      handler: 'index.handler',
+      runtime: PYTHON_RUNTIME,
+      layers: [layerFactory.pythonCommonLayer.layer],
+      timeout: Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        HEALTH_RECORDS_TABLE_NAME: dynamoFactory.healthRecordsTable.table.tableName,
+      },
+      additionalPolicies: [healthRecordsReadPolicy],
+      logging: {
+        logRetention: RetentionDays.ONE_MONTH,
+        removalPolicy: logRemovalPolicy,
+      },
+    });
+
+    this.getDashboardWorkoutsLambda = new LambdaConstruct(this, 'GetDashboardWorkoutsLambda', {
+      functionName: `${projectName}-${envName}-get-dashboard-workouts`,
+      description: 'Queries GPX workout records with cursor-based pagination',
+      code: Code.fromAsset('src/lambda/dashboard/get-workouts'),
+      handler: 'index.handler',
+      runtime: PYTHON_RUNTIME,
+      layers: [layerFactory.pythonCommonLayer.layer],
+      timeout: Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        HEALTH_RECORDS_TABLE_NAME: dynamoFactory.healthRecordsTable.table.tableName,
+      },
+      additionalPolicies: [healthRecordsReadPolicy],
+      logging: {
+        logRetention: RetentionDays.ONE_MONTH,
+        removalPolicy: logRemovalPolicy,
+      },
+    });
+
+    this.getDashboardJobsLambda = new LambdaConstruct(this, 'GetDashboardJobsLambda', {
+      functionName: `${projectName}-${envName}-get-dashboard-jobs`,
+      description: 'Lists ingestion job history sorted by most recent',
+      code: Code.fromAsset('src/lambda/dashboard/get-jobs'),
+      handler: 'index.handler',
+      runtime: PYTHON_RUNTIME,
+      layers: [layerFactory.pythonCommonLayer.layer],
+      timeout: Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        HEALTH_RECORDS_TABLE_NAME: dynamoFactory.healthRecordsTable.table.tableName,
+      },
+      additionalPolicies: [healthRecordsReadPolicy],
+      logging: {
+        logRetention: RetentionDays.ONE_MONTH,
+        removalPolicy: logRemovalPolicy,
+      },
+    });
+
+    this.getDashboardSummaryLambda = new LambdaConstruct(this, 'GetDashboardSummaryLambda', {
+      functionName: `${projectName}-${envName}-get-dashboard-summary`,
+      description: 'Computes composite health summary with parallel queries for last 7 days',
+      code: Code.fromAsset('src/lambda/dashboard/get-summary'),
+      handler: 'index.handler',
+      runtime: PYTHON_RUNTIME,
+      layers: [layerFactory.pythonCommonLayer.layer],
+      timeout: Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        HEALTH_RECORDS_TABLE_NAME: dynamoFactory.healthRecordsTable.table.tableName,
+      },
+      additionalPolicies: [healthRecordsReadPolicy],
       logging: {
         logRetention: RetentionDays.ONE_MONTH,
         removalPolicy: logRemovalPolicy,

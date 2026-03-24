@@ -2,7 +2,7 @@
 
 HealthNova has a complete ingestion pipeline that processes Apple Health exports and stores normalized records in DynamoDB. The `healthRecordsTable` uses 3 distinct PK patterns: sharded XML records (`USER#{id}#SHARD#{0-9}`), non-sharded ECG/GPX records (`USER#{id}`), and job status entries (`USER#{id}`). No read API exists. This change adds 5 dashboard endpoints to query this data.
 
-Current API has 2 routes (both writes): `POST /upload/presigned-url` and `POST /photobook/process`.
+Current API has 1 route (write): `POST /upload/presigned-url`.
 
 ## Goals / Non-Goals
 
