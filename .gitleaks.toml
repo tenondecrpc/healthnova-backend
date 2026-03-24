@@ -30,4 +30,5 @@ paths = [
   '''\.env\.example$''',
   '''cdk\.out/''',
   '''package-lock\.json$''',
+  '''\.snap$''',
 ]
