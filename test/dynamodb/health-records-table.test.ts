@@ -8,7 +8,10 @@ describe('DynamoDB Health Records Table', () => {
         { AttributeName: 'PK', KeyType: 'HASH' },
         { AttributeName: 'SK', KeyType: 'RANGE' },
       ],
-      BillingMode: 'PAY_PER_REQUEST',
+      ProvisionedThroughput: {
+        ReadCapacityUnits: 100,
+        WriteCapacityUnits: 5,
+      },
     });
   });
 

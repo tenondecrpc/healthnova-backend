@@ -26,7 +26,7 @@ This backend processes Apple Health export.zip files (containing XML health reco
 /lib                    # CDK infrastructure definitions
   /construct            # Reusable CDK constructs
   /stack                # Stack definitions by service
-    /shared/policy      # IAM policy builders
+    /shared/util         # Environment config utilities
 /src
   /lambda               # Lambda function code (Python)
     /core               # Core processing functions
