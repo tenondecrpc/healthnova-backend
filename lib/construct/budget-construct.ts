@@ -9,25 +9,47 @@ export interface BudgetConstructProps {
   params: ParamsConfig;
   monthlyLimitUsd: number;
   alertEmails: string[];
+  alertPhoneNumbers?: string[];
 }
 
 export class BudgetConstruct extends Construct {
+  public readonly alertTopic: sns.Topic;
+
   constructor(scope: Construct, id: string, props: BudgetConstructProps) {
     super(scope, id);
 
-    const { params, monthlyLimitUsd, alertEmails } = props;
+    const { params, monthlyLimitUsd, alertEmails, alertPhoneNumbers = [] } = props;
+    const prefix = `${params.projectName}-${params.envName}`;
+    const dailyLimitUsd = Math.ceil(monthlyLimitUsd / 10);
 
-    const notificationTopic = new sns.Topic(this, 'BudgetAlertTopic', {
-      topicName: `${params.projectName}-${params.envName}-budget-alerts`,
+    this.alertTopic = new sns.Topic(this, 'BudgetAlertTopic', {
+      topicName: `${prefix}-budget-alerts`,
     });
 
     alertEmails.forEach(email => {
-      notificationTopic.addSubscription(new subscriptions.EmailSubscription(email));
+      this.alertTopic.addSubscription(new subscriptions.EmailSubscription(email));
     });
+
+    alertPhoneNumbers.forEach(phone => {
+      this.alertTopic.addSubscription(new subscriptions.SmsSubscription(phone));
+    });
+
+    const snsSubscriber = {
+      subscriptionType: 'SNS' as const,
+      address: this.alertTopic.topicArn,
+    };
+
+    const allSubscribers = [
+      ...alertEmails.map(email => ({
+        subscriptionType: 'EMAIL' as const,
+        address: email,
+      })),
+      snsSubscriber,
+    ];
 
     new budgets.CfnBudget(this, 'MonthlyBudget', {
       budget: {
-        budgetName: `${params.projectName}-${params.envName}-monthly`,
+        budgetName: `${prefix}-monthly`,
         budgetType: 'COST',
         timeUnit: 'MONTHLY',
         budgetLimit: {
@@ -43,13 +65,19 @@ export class BudgetConstruct extends Construct {
           notification: {
             notificationType: 'ACTUAL',
             comparisonOperator: 'GREATER_THAN',
+            threshold: 50,
+            thresholdType: 'PERCENTAGE',
+          },
+          subscribers: allSubscribers,
+        },
+        {
+          notification: {
+            notificationType: 'ACTUAL',
+            comparisonOperator: 'GREATER_THAN',
             threshold: 80,
             thresholdType: 'PERCENTAGE',
           },
-          subscribers: alertEmails.map(email => ({
-            subscriptionType: 'EMAIL',
-            address: email,
-          })),
+          subscribers: allSubscribers,
         },
         {
           notification: {
@@ -58,10 +86,7 @@ export class BudgetConstruct extends Construct {
             threshold: 100,
             thresholdType: 'PERCENTAGE',
           },
-          subscribers: alertEmails.map(email => ({
-            subscriptionType: 'EMAIL',
-            address: email,
-          })),
+          subscribers: allSubscribers,
         },
         {
           notification: {
@@ -70,22 +95,63 @@ export class BudgetConstruct extends Construct {
             threshold: 100,
             thresholdType: 'PERCENTAGE',
           },
-          subscribers: alertEmails.map(email => ({
-            subscriptionType: 'EMAIL',
-            address: email,
-          })),
+          subscribers: allSubscribers,
         },
       ],
     });
 
+    new budgets.CfnBudget(this, 'DailyBudget', {
+      budget: {
+        budgetName: `${prefix}-daily`,
+        budgetType: 'COST',
+        timeUnit: 'DAILY',
+        budgetLimit: {
+          amount: dailyLimitUsd,
+          unit: 'USD',
+        },
+      },
+      notificationsWithSubscribers: [
+        {
+          notification: {
+            notificationType: 'ACTUAL',
+            comparisonOperator: 'GREATER_THAN',
+            threshold: 80,
+            thresholdType: 'PERCENTAGE',
+          },
+          subscribers: allSubscribers,
+        },
+        {
+          notification: {
+            notificationType: 'ACTUAL',
+            comparisonOperator: 'GREATER_THAN',
+            threshold: 100,
+            thresholdType: 'PERCENTAGE',
+          },
+          subscribers: allSubscribers,
+        },
+      ],
+    });
+
+    const anomalyMonitor = new ce.CfnAnomalyMonitor(this, 'AnomalyMonitor', {
+      monitorName: `${prefix}-service-anomaly`,
+      monitorType: 'DIMENSIONAL',
+      monitorDimension: 'SERVICE',
+    });
+
     new ce.CfnAnomalySubscription(this, 'AnomalySubscription', {
-      subscriptionName: `${params.projectName}-${params.envName}-anomaly-alerts`,
-      monitorArnList: [],
-      subscribers: alertEmails.map(email => ({
-        address: email,
-        type: 'EMAIL',
-      })),
-      threshold: 20,
+      subscriptionName: `${prefix}-anomaly-alerts`,
+      monitorArnList: [anomalyMonitor.attrMonitorArn],
+      subscribers: [
+        ...alertEmails.map(email => ({
+          address: email,
+          type: 'EMAIL' as const,
+        })),
+        {
+          address: this.alertTopic.topicArn,
+          type: 'SNS' as const,
+        },
+      ],
+      threshold: 10,
       frequency: 'DAILY',
     });
   }

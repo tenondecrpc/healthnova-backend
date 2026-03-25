@@ -26,7 +26,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     item = {
         "PK": f"USER#{user_id}",
         "SK": f"JOB#{job_id}",
-        "GSI1SK": f"JOB#{job_id}",
         "status": status,
         "updatedAt": str(int(time.time())),
     }

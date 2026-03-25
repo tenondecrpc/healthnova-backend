@@ -180,7 +180,6 @@ def _stream_parse_and_write(xml_file: io.BufferedReader, user_id: str, job_id: s
                 "Item": {
                     "PK": {"S": pk},
                     "SK": {"S": sk},
-                    "GSI1SK": {"S": f"{short_type}#{start_date}"},
                     "recordType": {"S": short_type},
                     "value": {"S": elem.get("value", "")},
                     "unit": {"S": elem.get("unit", "")},

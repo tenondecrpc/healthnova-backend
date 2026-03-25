@@ -68,15 +68,22 @@ jobs:
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
 
+      - name: Resolve CFN template name
+        run: |
+          PROJECT=$(echo "${{ vars.PROJECT_NAME }}" | sed 's/./\U&/' )
+          ENV=$(echo "${{ vars.ENV_NAME }}" | sed 's/./\U&/' )
+          TEMPLATE="${PROJECT}${ENV}Stack.template.json"
+          echo "CFN_TEMPLATE=${TEMPLATE}" >> $GITHUB_ENV
+
       - name: Infracost diff
         run: |
           infracost breakdown \
-            --path cdk.out.base \
+            --path "cdk.out.base/${CFN_TEMPLATE}" \
             --format json \
             --out-file infracost-base.json
 
           infracost diff \
-            --path cdk.out.current \
+            --path "cdk.out.current/${CFN_TEMPLATE}" \
             --compare-to infracost-base.json \
             --format json \
             --out-file infracost.json

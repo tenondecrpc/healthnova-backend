@@ -51,28 +51,6 @@ export class StepFunctionsFactory extends Construct {
       retryOnServiceExceptions: true,
     });
 
-    // Step 2b: Scale DynamoDB up before parallel parsing
-    const scaleDynamoUp = new tasks.LambdaInvoke(this, 'ScaleDynamoUp', {
-      lambdaFunction: lambdaFactory.scaleDynamoLambda.function,
-      payload: sfn.TaskInput.fromObject({ action: 'up' }),
-      resultPath: sfn.JsonPath.DISCARD,
-      retryOnServiceExceptions: true,
-    });
-
-    // Step 4c: Scale DynamoDB down after parallel parsing
-    const scaleDynamoDown = new tasks.LambdaInvoke(this, 'ScaleDynamoDown', {
-      lambdaFunction: lambdaFactory.scaleDynamoLambda.function,
-      payload: sfn.TaskInput.fromObject({ action: 'down' }),
-      resultPath: sfn.JsonPath.DISCARD,
-      retryOnServiceExceptions: true,
-    });
-
-    const scaleDynamoDownOnError = new tasks.LambdaInvoke(this, 'ScaleDynamoDownOnError', {
-      lambdaFunction: lambdaFactory.scaleDynamoLambda.function,
-      payload: sfn.TaskInput.fromObject({ action: 'down' }),
-      resultPath: sfn.JsonPath.DISCARD,
-    });
-
     // Step 3a: Parse XML via Glue job
     let parseXml: sfn.IChainable;
     if (glueJobName) {
@@ -143,7 +121,7 @@ export class StepFunctionsFactory extends Construct {
         'errorStep': 'ParallelParsing',
       },
     });
-    handleError.next(scaleDynamoDownOnError).next(markFailed);
+    handleError.next(markFailed);
 
     parallelParsing.addCatch(handleError, {
       resultPath: '$.error',
@@ -153,9 +131,7 @@ export class StepFunctionsFactory extends Construct {
     const definition = parseInput
       .next(validateFile)
       .next(extractManifest)
-      .next(scaleDynamoUp)
       .next(parallelParsing)
-      .next(scaleDynamoDown)
       .next(markComplete);
 
     // Create state machine

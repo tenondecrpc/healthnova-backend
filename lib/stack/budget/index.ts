@@ -6,6 +6,7 @@ export interface BudgetFactoryProps {
   params: ParamsConfig;
   monthlyLimitUsd: number;
   alertEmails: string[];
+  alertPhoneNumbers?: string[];
 }
 
 export class BudgetFactory extends Construct {
@@ -16,6 +17,7 @@ export class BudgetFactory extends Construct {
       params: props.params,
       monthlyLimitUsd: props.monthlyLimitUsd,
       alertEmails: props.alertEmails,
+      alertPhoneNumbers: props.alertPhoneNumbers,
     });
   }
 }
