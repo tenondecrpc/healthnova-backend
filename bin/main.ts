@@ -17,4 +17,5 @@ new MainStack(app, mainStackName, {
   githubRepo: process.env.GH_REPO ?? '',
   monthlyBudgetUsd: Number(process.env.MONTHLY_BUDGET_USD ?? '100'),
   budgetAlertEmails: (process.env.BUDGET_ALERT_EMAILS ?? '').split(',').filter(Boolean),
+  budgetAlertPhoneNumbers: (process.env.BUDGET_ALERT_PHONES ?? '').split(',').filter(Boolean),
 });

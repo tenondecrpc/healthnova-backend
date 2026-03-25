@@ -24,6 +24,15 @@ export class RestApiFactory extends Construct {
     const { params, cognitoFactory, lambdaFactory } = props;
     const { envName, projectName } = params;
 
+    // Validate CORS origins - no wildcards allowed for security
+    const corsOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [];
+    if (corsOrigins.length === 0 || corsOrigins.includes('*')) {
+      throw new Error(
+        'CORS_ALLOWED_ORIGINS must be defined and cannot contain wildcard (*). ' +
+        'Please specify explicit origins in .env file for security.'
+      );
+    }
+
     // Create the main REST API with all routes
     // Using Lambda Authorizer for OAuth 2.0 compliance (accepts Access Tokens)
     this.restApiConstruct = new RestApiConstruct(this, 'RestApi', {
@@ -36,11 +45,9 @@ export class RestApiFactory extends Construct {
 
       // CORS configuration for web/mobile apps
       corsConfig: {
-        allowOrigins: envName === 'prod'
-          ? ['https://example.com', 'https://www.example.com']
-          : ['http://localhost:3000', 'https://develop.xxxxxxxxxx.amplifyapp.com', 'https://mydomain.com'],
-        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-        allowHeaders: [
+        allowOrigins: corsOrigins,
+        allowMethods: process.env.CORS_ALLOWED_METHODS?.split(',').map(m => m.trim()) || ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowHeaders: process.env.CORS_ALLOWED_HEADERS?.split(',').map(h => h.trim()) || [
           'Content-Type',
           'Authorization',
           'X-Requested-With',
@@ -54,7 +61,7 @@ export class RestApiFactory extends Construct {
           'X-Request-Id',
           'X-Amz-Request-Id'
         ],
-        maxAge: Duration.hours(24),
+        maxAge: Duration.seconds(parseInt(process.env.CORS_MAX_AGE || '86400')),
         allowCredentials: false, // Cannot use credentials with multiple origins
       },
 

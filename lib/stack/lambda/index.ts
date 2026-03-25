@@ -28,7 +28,6 @@ export class LambdaFactory extends Construct {
   public readonly validateFileLambda: LambdaConstruct;
   public readonly extractManifestLambda: LambdaConstruct;
   public readonly markCompleteLambda: LambdaConstruct;
-  public readonly scaleDynamoLambda: LambdaConstruct;
   public readonly parseEcgLambda: LambdaConstruct;
   public readonly parseGpxLambda: LambdaConstruct;
   public readonly notFoundLambda: LambdaConstruct;
@@ -165,31 +164,6 @@ export class LambdaFactory extends Construct {
       },
     });
 
-    this.scaleDynamoLambda = new LambdaConstruct(this, 'ScaleDynamoLambda', {
-      functionName: `${projectName}-${envName}-scale-dynamo`,
-      description: 'Scales DynamoDB health-records table WCU up before ingestion and down after',
-      code: Code.fromAsset('src/lambda/ingestion/scale-dynamo'),
-      handler: 'index.handler',
-      runtime: PYTHON_RUNTIME,
-      layers: [layerFactory.pythonCommonLayer.layer],
-      timeout: Duration.minutes(6),
-      environment: {
-        HEALTH_RECORDS_TABLE_NAME: dynamoFactory.healthRecordsTable.table.tableName,
-        WCU_HIGH: '7000',
-        WCU_LOW: '5',
-        RCU: '100',
-        GSI_NAME: 'UserTypeIndex',
-      },
-      additionalPolicies: [new iam.PolicyStatement({
-        actions: ['dynamodb:UpdateTable', 'dynamodb:DescribeTable'],
-        resources: [dynamoFactory.healthRecordsTable.tableArn],
-      })],
-      logging: {
-        logRetention: RetentionDays.ONE_MONTH,
-        removalPolicy: logRemovalPolicy,
-      },
-    });
-
     this.parseEcgLambda = new LambdaConstruct(this, 'ParseEcgLambda', {
       functionName: `${projectName}-${envName}-parse-ecg`,
       description: 'Parses ECG CSV files from the export ZIP',
@@ -269,10 +243,7 @@ export class LambdaFactory extends Construct {
     // =====================
     const healthRecordsReadPolicy = new iam.PolicyStatement({
       actions: ['dynamodb:Query'],
-      resources: [
-        dynamoFactory.healthRecordsTable.tableArn,
-        `${dynamoFactory.healthRecordsTable.tableArn}/index/UserTypeIndex`,
-      ],
+      resources: [dynamoFactory.healthRecordsTable.tableArn],
     });
 
     this.getDashboardMetricsLambda = new LambdaConstruct(this, 'GetDashboardMetricsLambda', {

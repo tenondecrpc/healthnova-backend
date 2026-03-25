@@ -67,7 +67,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                             item = {
                                 "PK": f"USER#{user_id}",
                                 "SK": f"RECORD#GPX#{route_time}#{total_records}",
-                                "GSI1SK": f"GPX#{route_time}",
                                 "recordType": "GPX",
                                 "sourceFile": gpx_file,
                                 "waypointCount": len(waypoints),

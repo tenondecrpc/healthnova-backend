@@ -46,7 +46,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         item = {
                             "PK": f"USER#{user_id}",
                             "SK": f"RECORD#ECG#{timestamp}#{total_records}",
-                            "GSI1SK": f"ECG#{timestamp}",
                             "recordType": "ECG",
                             "sourceFile": ecg_file,
                             "classification": row.get("Classification", ""),

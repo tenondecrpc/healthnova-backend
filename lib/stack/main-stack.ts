@@ -24,13 +24,14 @@ interface MainStackProps extends cdk.StackProps {
   githubRepo: string;
   monthlyBudgetUsd: number;
   budgetAlertEmails: string[];
+  budgetAlertPhoneNumbers?: string[];
 }
 
 export class MainStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: MainStackProps) {
     super(scope, id, props);
 
-    const { params, githubOrg, githubRepo, monthlyBudgetUsd, budgetAlertEmails } = props;
+    const { params, githubOrg, githubRepo, monthlyBudgetUsd, budgetAlertEmails, budgetAlertPhoneNumbers } = props;
     const { envName, projectName } = params;
 
     const s3Factory = new S3Factory(this, 'S3Factory', {
@@ -83,6 +84,7 @@ export class MainStack extends cdk.Stack {
       params,
       monthlyLimitUsd: monthlyBudgetUsd,
       alertEmails: budgetAlertEmails,
+      alertPhoneNumbers: budgetAlertPhoneNumbers,
     });
 
     new GuardDutyFactory(this, 'GuardDutyFactory', { params });

@@ -46,23 +46,7 @@ export class DynamoFactory extends Construct {
           name: 'SK',
           type: dynamodb.AttributeType.STRING,
         },
-        billingMode: dynamodb.BillingMode.PROVISIONED,
-        readCapacity: 100,
-        writeCapacity: 5,
-        globalSecondaryIndexes: [{
-          indexName: 'UserTypeIndex',
-          partitionKey: {
-            name: 'PK',
-            type: dynamodb.AttributeType.STRING,
-          },
-          sortKey: {
-            name: 'GSI1SK',
-            type: dynamodb.AttributeType.STRING,
-          },
-          projectionType: dynamodb.ProjectionType.ALL,
-          readCapacity: 100,
-          writeCapacity: 5,
-        }],
+        billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       },
     });
   }
